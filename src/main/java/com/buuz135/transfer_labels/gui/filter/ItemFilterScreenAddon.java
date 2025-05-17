@@ -146,6 +146,7 @@ public class ItemFilterScreenAddon extends BasicScreenAddon {
                         } else {
                             tooltip.add(Component.literal(" None").withStyle(ChatFormatting.GRAY));
                         }
+                        tooltip.add(Component.translatable("filter.type.scroll").withStyle(ChatFormatting.DARK_GRAY));
                     }
                     guiGraphics.renderComponentTooltip(screen.getMinecraft().font, tooltip , mouseX - guiX, mouseY - guiY);
                     RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);

@@ -14,6 +14,7 @@ import com.hrznstudio.titanium.api.client.IScreenAddon;
 import com.hrznstudio.titanium.api.filter.FilterSlot;
 import com.hrznstudio.titanium.client.screen.addon.StateButtonInfo;
 import com.hrznstudio.titanium.component.button.ButtonComponent;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -191,7 +192,7 @@ public class ItemFilter implements ILabelFilter<ItemStack>{
         list.add(() -> {
             var lines = new ArrayList<String>();
             FilterType.FILTERS.forEach(filterType1 -> lines.addAll(filterType1.getTooltip()));
-            lines.add(Component.translatable("filter.type.scroll").getString());
+            lines.add(Component.translatable("filter.type.scroll").withStyle(ChatFormatting.DARK_GRAY).getString());
             return new ScrollableScreenAddon(13, 28, new ScrollableSelectionHelper("filter_selector", -7, lines, () -> Component.translatable(this.filterType.getDisplayName()).getString(), false), () -> {
                 switch (this.filterType.getName()) {
                     case "normal":

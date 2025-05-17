@@ -69,10 +69,12 @@ public class LabelInstance implements IScreenAddonProvider, MenuProvider, IButto
         this.amountFilter = new InventoryComponent<LabelInstance>("amountFilter", 145, 30, 1)
                 .setSlotLimit(63)
                 .setInputFilter((itemStack, integer) -> ItemStack.isSameItem(itemStack, label))
+                .setSlotToItemStackRender(0, label)
                 .setSlotToColorRender(0, DyeColor.PURPLE);
         this.speedFilter = new InventoryComponent<LabelInstance>("speedFilter", 145, 66, 1)
                 .setSlotLimit(38)
                 .setInputFilter((itemStack, integer) -> ItemStack.isSameItem(itemStack, label))
+                .setSlotToItemStackRender(0, label)
                 .setSlotToColorRender(0, DyeColor.LIME);
         this.amountFilter.setComponentHarness(this);
         this.speedFilter.setComponentHarness(this);
