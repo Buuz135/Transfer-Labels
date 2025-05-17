@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "transfer_labels:fluidstack_insert_transfer_label"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "transfer_labels:fluidstack_extract_transfer_label"
+  }
+}
