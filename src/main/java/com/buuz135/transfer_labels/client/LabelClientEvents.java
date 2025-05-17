@@ -1,22 +1,39 @@
 package com.buuz135.transfer_labels.client;
 
+import com.buuz135.transfer_labels.LabelInteractEvents;
 import com.buuz135.transfer_labels.TransferLabels;
 import com.buuz135.transfer_labels.item.TransferLabelItem;
+import com.buuz135.transfer_labels.packet.LabelSyncPacket;
+import com.buuz135.transfer_labels.storage.LabelLocatorInstance;
+import com.buuz135.transfer_labels.storage.LabelStorage;
 import com.buuz135.transfer_labels.storage.client.LabelClientStorage;
+import com.hrznstudio.titanium.network.locator.LocatorFactory;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.*;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.RenderHighlightEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class LabelClientEvents {
 
@@ -218,4 +235,50 @@ public class LabelClientEvents {
         }
         return ResourceLocation.fromNamespaceAndPath(TransferLabels.MODID, "textures/item/itemstack_insert_transfer_label.png");
     }
+
+    public static List<LabelInteractEvents.DelayedEvent> CLIENT_UPDATE = new ArrayList<>();
+
+    @SubscribeEvent
+    public void onTick(LevelTickEvent.Post event) {
+        var delay = 2;
+        if (event.getLevel() instanceof ClientLevel clientLevel) {
+            CLIENT_UPDATE.forEach(leftClickBlock -> {
+                if (clientLevel.getGameTime() > (leftClickBlock.time() + delay) && leftClickBlock.event().getLevel().equals(event.getLevel())) leftClickBlock.event().getLevel().destroyBlockProgress(leftClickBlock.event().getEntity().getId(), leftClickBlock.event().getPos(), -1);
+            });
+            CLIENT_UPDATE.removeIf(leftClickBlock -> clientLevel.getGameTime() > (leftClickBlock.time() + delay) && leftClickBlock.event().getLevel().equals(event.getLevel()));
+        }
+    }
+
+    @SubscribeEvent
+    public void onRightClick(PlayerInteractEvent.RightClickBlock event) {
+        if (event.getLevel() instanceof ClientLevel clientLevel) {
+            var nearbyLabels = LabelClientStorage.getNearbyLabels(clientLevel, event.getPos(), 20);
+            var pair = RayTraceUtils.rayTraceVoxelShape(nearbyLabels, clientLevel, event.getEntity(),  0, event.getPos());
+            if (pair != null) {
+                if (event.getItemStack().getItem() instanceof TransferLabelItem){
+                    event.setCanceled(true);
+                    event.setCancellationResult(InteractionResult.SUCCESS);
+                } else {
+
+                }
+            }
+        }
+    }
+
+
+    @SubscribeEvent
+    public void onLeftClick(PlayerInteractEvent.LeftClickBlock event) {
+        if (event.getItemStack().getItem() instanceof TransferLabelItem && event.getAction() == PlayerInteractEvent.LeftClickBlock.Action.START){
+             if (event.getLevel() instanceof ClientLevel clientLevel) {
+                var distance = event.getEntity().getAttribute(Attributes.BLOCK_INTERACTION_RANGE).getValue();
+                var nearbyLabels = LabelClientStorage.getNearbyLabels(clientLevel, event.getPos(), (int) (distance*distance));
+                var pair = RayTraceUtils.rayTraceVoxelShape(nearbyLabels, clientLevel, event.getEntity(),  0, event.getPos());
+                if (pair != null) {
+                    event.setCanceled(true);
+                    CLIENT_UPDATE.add(new LabelInteractEvents.DelayedEvent(event, clientLevel.getGameTime()));
+                }
+            }
+        }
+    }
+
 }

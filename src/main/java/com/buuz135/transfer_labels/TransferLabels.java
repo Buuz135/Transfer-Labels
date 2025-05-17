@@ -21,6 +21,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
@@ -45,13 +46,13 @@ public class TransferLabels extends ModuleController {
     public static DeferredHolder<Item, Item> FLUIDSTACK_INSERT_LABEL;
     public static DeferredHolder<Item, Item> FLUIDSTACK_EXTRACT_LABEL;
 
-    public TransferLabels(IEventBus modEventBus, ModContainer modContainer) {
+    public TransferLabels(Dist dist, IEventBus modEventBus, ModContainer modContainer) {
         super(modContainer);
 
         NETWORK.registerMessage("label_sync_packet", LabelSyncPacket.class);
         NETWORK.registerMessage("single_label_sync_packet", SingleLabelSyncPacket.class);
 
-        NeoForge.EVENT_BUS.register(new LabelClientEvents());
+        if (dist.isClient()) NeoForge.EVENT_BUS.register(new LabelClientEvents());
         NeoForge.EVENT_BUS.register(new LabelInteractEvents());
 
         EventManager.mod(GatherDataEvent.class).process(this::dataGen).subscribe();
