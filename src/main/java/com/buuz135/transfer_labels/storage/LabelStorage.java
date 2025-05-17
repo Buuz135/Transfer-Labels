@@ -78,13 +78,20 @@ public class LabelStorage extends SavedData {
     }
 
     public void load(CompoundTag compoundTag, HolderLookup.Provider provider) {
-        labelBlocks = new HashMap<>();
+        //labelBlocks = new HashMap<>();
         CompoundTag labels = compoundTag.getCompound("Labels");
+        List<BlockPos> visitedPositions = new java.util.ArrayList<>();
         labels.getAllKeys().forEach(s -> {
             var pos = BlockPos.of(Long.parseLong(s));
-            var label = new LabelBlock(pos, level);
-            label.deserializeNBT(provider, labels.getCompound(s));
-            labelBlocks.put(pos, label);
+            visitedPositions.add(pos);
+            if (this.labelBlocks.containsKey(pos)){
+                this.labelBlocks.get(pos).deserializeNBT(provider, labels.getCompound(s));
+            } else {
+                var label = new LabelBlock(pos, level);
+                label.deserializeNBT(provider, labels.getCompound(s));
+                labelBlocks.put(pos, label);
+            }
         });
+        this.labelBlocks.keySet().removeIf(pos -> !visitedPositions.contains(pos));
     }
 }

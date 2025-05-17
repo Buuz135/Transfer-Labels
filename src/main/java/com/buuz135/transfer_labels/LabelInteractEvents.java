@@ -39,7 +39,7 @@ public class LabelInteractEvents {
             LabelStorage.getStorageFor(serverLevel).getLabelBlocks().forEach(labelBlock -> labelBlock.getLabels().forEach( (direction, label) -> label.work(serverLevel)));
             if (event.getLevel().getGameTime() % 20 == 0) {
                 serverLevel.players().forEach(player -> {
-                    //TransferLabels.NETWORK.sendTo(new LabelSyncPacket(serverLevel.getLevel().dimension().location(), LabelStorage.getStorageFor(serverLevel).save(new CompoundTag(), serverLevel.registryAccess())), player);
+                    TransferLabels.NETWORK.sendTo(new LabelSyncPacket(serverLevel.getLevel().dimension().location(), LabelStorage.getStorageFor(serverLevel).save(new CompoundTag(), serverLevel.registryAccess())), player);
                 });
             }
         }

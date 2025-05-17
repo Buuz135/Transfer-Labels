@@ -15,7 +15,9 @@ import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.common.util.INBTSerializable;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 
 public class LabelBlock implements INBTSerializable<CompoundTag> {
@@ -67,13 +69,16 @@ public class LabelBlock implements INBTSerializable<CompoundTag> {
     @Override
     public void deserializeNBT(HolderLookup.Provider provider, CompoundTag compoundTag) {
         //this.labels = new HashMap<>();
+        List<Direction> visitedDirections = new ArrayList<>();
         compoundTag.getAllKeys().forEach(s -> {
             var labelInstanceCompoundTag = compoundTag.getCompound(s);
             var direction = Direction.valueOf(s);
+            visitedDirections.add(direction);
             var instance = this.labels.computeIfAbsent(direction, direction1 -> new LabelInstance(ItemStack.parseOptional(provider, labelInstanceCompoundTag.getCompound("Stack")), level, pos, direction, this));
             instance.deserializeNBT(provider, labelInstanceCompoundTag.getCompound("Extra"));
             this.labels.put(direction, instance);
         });
+        this.labels.keySet().removeIf(direction -> !visitedDirections.contains(direction));
     }
 
     public void updateToNearby(Player player){
