@@ -14,6 +14,7 @@
   "item.transfer_labels.fluidstack_insert_transfer_label": "流体存入传输标贴",
   "item.transfer_labels.itemstack_extract_transfer_label": "物品提取传输标贴",
   "item.transfer_labels.itemstack_insert_transfer_label": "物品存入传输标贴",
+  "item.transfer_labels.label_accessor": "标贴访问器",
   "itemGroup.transfer_labels": "传输标贴",
   "tooltip.transfer_labels.blacklist": "黑名单",
   "tooltip.transfer_labels.slot.amount": "数量",
