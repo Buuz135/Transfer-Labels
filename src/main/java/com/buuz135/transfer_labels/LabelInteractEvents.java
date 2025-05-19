@@ -6,7 +6,7 @@ import com.buuz135.transfer_labels.packet.LabelSyncPacket;
 import com.buuz135.transfer_labels.storage.LabelLocatorInstance;
 import com.buuz135.transfer_labels.storage.LabelStorage;
 import com.hrznstudio.titanium.network.locator.LocatorFactory;
-import net.minecraft.client.Minecraft;
+
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -52,7 +52,7 @@ public class LabelInteractEvents {
 
     @SubscribeEvent
     public void onRightClick(PlayerInteractEvent.RightClickBlock event) {
-        var isHoldingAccessor = Minecraft.getInstance().player.getItemInHand(InteractionHand.MAIN_HAND).is(TransferLabels.LABEL_ACCESSOR.get());
+        var isHoldingAccessor = event.getItemStack().is(TransferLabels.LABEL_ACCESSOR.get());
         var validInteraction =  event.getItemStack().getItem() instanceof TransferLabelItem || isHoldingAccessor;
         if (event.getLevel() instanceof ServerLevel serverLevel && validInteraction) {
             var nearbyLabels = LabelStorage.getNearbyLabels(serverLevel, event.getPos(), 20);
@@ -70,7 +70,7 @@ public class LabelInteractEvents {
 
     @SubscribeEvent
     public void onLeftClick(PlayerInteractEvent.LeftClickBlock event) {
-        var isHoldingAccessor = Minecraft.getInstance().player.getItemInHand(InteractionHand.MAIN_HAND).is(TransferLabels.LABEL_ACCESSOR.get());
+        var isHoldingAccessor = event.getItemStack().is(TransferLabels.LABEL_ACCESSOR.get());
         var validInteraction =  event.getItemStack().getItem() instanceof TransferLabelItem || isHoldingAccessor;
         if (validInteraction && event.getAction() == PlayerInteractEvent.LeftClickBlock.Action.START){
             if (event.getLevel() instanceof ServerLevel serverLevel) {

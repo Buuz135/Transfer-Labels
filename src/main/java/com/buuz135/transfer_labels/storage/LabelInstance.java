@@ -38,6 +38,8 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.common.util.INBTSerializable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -80,6 +82,7 @@ public class LabelInstance implements IScreenAddonProvider, MenuProvider, IButto
         this.speedFilter.setComponentHarness(this);
     }
 
+    @OnlyIn(Dist.CLIENT)
     @Override
     public @NotNull List<IFactory<? extends IScreenAddon>> getScreenAddons() {
         var arrayList = new ArrayList<IFactory<? extends IScreenAddon>>();

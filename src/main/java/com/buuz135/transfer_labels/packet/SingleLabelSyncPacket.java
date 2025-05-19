@@ -8,6 +8,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public class SingleLabelSyncPacket extends Message {
@@ -26,6 +28,7 @@ public class SingleLabelSyncPacket extends Message {
     public SingleLabelSyncPacket() {
     }
 
+    @OnlyIn(Dist.CLIENT)
     @Override
     protected void handleMessage(IPayloadContext context) {
         context.enqueueWork(() -> {

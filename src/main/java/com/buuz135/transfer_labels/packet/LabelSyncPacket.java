@@ -8,6 +8,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.dimension.DimensionType;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public class LabelSyncPacket extends Message {
@@ -29,6 +31,7 @@ public class LabelSyncPacket extends Message {
     public LabelSyncPacket() {
     }
 
+    @OnlyIn(Dist.CLIENT)
     @Override
     protected void handleMessage(IPayloadContext context) {
         context.enqueueWork(() -> {
