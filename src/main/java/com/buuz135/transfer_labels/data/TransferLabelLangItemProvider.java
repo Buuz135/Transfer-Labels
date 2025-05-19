@@ -23,6 +23,7 @@ public class TransferLabelLangItemProvider extends LanguageProvider {
         formatItem(TransferLabels.ITEMSTACK_EXTRACT_LABEL.get());
         formatItem(TransferLabels.FLUIDSTACK_INSERT_LABEL.get());
         formatItem(TransferLabels.FLUIDSTACK_EXTRACT_LABEL.get());
+        formatItem(TransferLabels.LABEL_ACCESSOR.get());
         this.add("filter.type.normal", "Normal Filter");
         this.add("filter.type.normal.tooltip", "Transfer only if it is the same as the filter");
         this.add("filter.type.regulating", "Regulating Filter");

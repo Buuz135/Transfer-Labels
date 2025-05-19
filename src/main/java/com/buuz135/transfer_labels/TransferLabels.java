@@ -45,6 +45,7 @@ public class TransferLabels extends ModuleController {
     public static DeferredHolder<Item, Item> ITEMSTACK_EXTRACT_LABEL;
     public static DeferredHolder<Item, Item> FLUIDSTACK_INSERT_LABEL;
     public static DeferredHolder<Item, Item> FLUIDSTACK_EXTRACT_LABEL;
+    public static DeferredHolder<Item, Item> LABEL_ACCESSOR;
 
     public TransferLabels(Dist dist, IEventBus modEventBus, ModContainer modContainer) {
         super(modContainer);
@@ -68,6 +69,11 @@ public class TransferLabels extends ModuleController {
         ITEMSTACK_EXTRACT_LABEL = getRegistries().registerGeneric(Registries.ITEM, "itemstack_extract_transfer_label", () ->  new ItemStackTransferLabelItem(TransferLabelItem.Mode.EXTRACT));
         FLUIDSTACK_INSERT_LABEL = getRegistries().registerGeneric(Registries.ITEM, "fluidstack_insert_transfer_label", () ->  new FluidStackTransferLabelItem(TransferLabelItem.Mode.INSERT));
         FLUIDSTACK_EXTRACT_LABEL = getRegistries().registerGeneric(Registries.ITEM, "fluidstack_extract_transfer_label", () ->  new FluidStackTransferLabelItem(TransferLabelItem.Mode.EXTRACT));
+        LABEL_ACCESSOR = getRegistries().registerGeneric(Registries.ITEM, "label_accessor", () -> {
+            var item = new Item(new Item.Properties().stacksTo(1));
+            TAB.getTabList().add(item);
+            return item;
+        });
     }
 
     public void dataGen(GatherDataEvent event) {

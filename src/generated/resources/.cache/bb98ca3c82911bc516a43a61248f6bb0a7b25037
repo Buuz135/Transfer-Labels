@@ -1,5 +1,6 @@
-// 1.21.1	2025-05-17T18:43:16.2281667	Item Models: transfer_labels
+// 1.21.1	2025-05-18T19:59:50.596128	Item Models: transfer_labels
 2e4f58f73e661f9b4ce48130cc4063600a8147b1 assets/transfer_labels/models/item/fluidstack_extract_transfer_label.json
 79f41ec61bc7ea8a5a3328a6ae6febd4ce53e4ed assets/transfer_labels/models/item/fluidstack_insert_transfer_label.json
 d35d6a47b2ec0c19dcf78e100c130a061abc283e assets/transfer_labels/models/item/itemstack_extract_transfer_label.json
 639fab9555eb3694e87e07ed04bc840467e7983a assets/transfer_labels/models/item/itemstack_insert_transfer_label.json
+88679b5c7086958f2089eb51f4542e01fb7b8593 assets/transfer_labels/models/item/label_accessor.json

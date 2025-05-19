@@ -40,10 +40,11 @@ public class LabelClientEvents {
     @SubscribeEvent
     public void blockOverlayEvent(RenderHighlightEvent.Block event) {
         var distance = Minecraft.getInstance().player.getAttribute(Attributes.BLOCK_INTERACTION_RANGE).getValue();
-        var isHoldingLabel = Minecraft.getInstance().player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof TransferLabelItem;
+        var isHoldingAccessor = Minecraft.getInstance().player.getItemInHand(InteractionHand.MAIN_HAND).is(TransferLabels.LABEL_ACCESSOR.get());
+        var isHoldingLabel = Minecraft.getInstance().player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof TransferLabelItem || isHoldingAccessor;
         if (isHoldingLabel){
             var nearbyLabels = LabelClientStorage.getNearbyLabels(Minecraft.getInstance().level, event.getTarget().getBlockPos(), (int) (distance*distance));
-            var pair = RayTraceUtils.rayTraceVoxelShape(nearbyLabels, Minecraft.getInstance().level, Minecraft.getInstance().player,  0, event.getTarget().getBlockPos());
+            var pair = RayTraceUtils.rayTraceVoxelShape(nearbyLabels, Minecraft.getInstance().level, Minecraft.getInstance().player,  0, isHoldingAccessor ? null : event.getTarget().getBlockPos());
             if (pair != null) {
                 event.setCanceled(true);
 
@@ -88,13 +89,14 @@ public class LabelClientEvents {
     public void onRender(RenderLevelStageEvent event){
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES) return;
         var currentPos = Minecraft.getInstance().player.blockPosition();
-        var isHoldingLabel = Minecraft.getInstance().player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof TransferLabelItem;
+        var isHoldingAccessor = Minecraft.getInstance().player.getItemInHand(InteractionHand.MAIN_HAND).is(TransferLabels.LABEL_ACCESSOR.get());
+        var isHoldingLabel = Minecraft.getInstance().player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof TransferLabelItem || isHoldingAccessor;
         var transparentAlpha = 100;
         var nearbyLabels = LabelClientStorage.getNearbyLabels(Minecraft.getInstance().level, currentPos, 20*20);
         var poseStack = event.getPoseStack();
         var combinedLight = LightTexture.FULL_BRIGHT;
         var combinedOverlay = OverlayTexture.NO_OVERLAY;
-        if (isHoldingLabel && Minecraft.getInstance().player.isCrouching()){
+        if ((isHoldingLabel && Minecraft.getInstance().player.isCrouching()) || isHoldingAccessor){
             RenderSystem.disableDepthTest();
         } else {
             RenderSystem.enableDepthTest();
@@ -251,16 +253,13 @@ public class LabelClientEvents {
 
     @SubscribeEvent
     public void onRightClick(PlayerInteractEvent.RightClickBlock event) {
-        if (event.getLevel() instanceof ClientLevel clientLevel) {
+        var validInteraction =  event.getItemStack().getItem() instanceof TransferLabelItem || event.getItemStack().is(TransferLabels.LABEL_ACCESSOR);
+        if (event.getLevel() instanceof ClientLevel clientLevel && validInteraction) {
             var nearbyLabels = LabelClientStorage.getNearbyLabels(clientLevel, event.getPos(), 20);
-            var pair = RayTraceUtils.rayTraceVoxelShape(nearbyLabels, clientLevel, event.getEntity(),  0, event.getPos());
+            var pair = RayTraceUtils.rayTraceVoxelShape(nearbyLabels, clientLevel, event.getEntity(),  0, event.getItemStack().is(TransferLabels.LABEL_ACCESSOR) ? null : event.getPos());
             if (pair != null) {
-                if (event.getItemStack().getItem() instanceof TransferLabelItem){
-                    event.setCanceled(true);
-                    event.setCancellationResult(InteractionResult.SUCCESS);
-                } else {
-
-                }
+                event.setCanceled(true);
+                event.setCancellationResult(InteractionResult.SUCCESS);
             }
         }
     }

@@ -6,11 +6,13 @@ import com.buuz135.transfer_labels.packet.LabelSyncPacket;
 import com.buuz135.transfer_labels.storage.LabelLocatorInstance;
 import com.buuz135.transfer_labels.storage.LabelStorage;
 import com.hrznstudio.titanium.network.locator.LocatorFactory;
+import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -50,18 +52,16 @@ public class LabelInteractEvents {
 
     @SubscribeEvent
     public void onRightClick(PlayerInteractEvent.RightClickBlock event) {
-        if (event.getLevel() instanceof ServerLevel serverLevel) {
+        var isHoldingAccessor = Minecraft.getInstance().player.getItemInHand(InteractionHand.MAIN_HAND).is(TransferLabels.LABEL_ACCESSOR.get());
+        var validInteraction =  event.getItemStack().getItem() instanceof TransferLabelItem || isHoldingAccessor;
+        if (event.getLevel() instanceof ServerLevel serverLevel && validInteraction) {
             var nearbyLabels = LabelStorage.getNearbyLabels(serverLevel, event.getPos(), 20);
-            var pair = RayTraceUtils.rayTraceVoxelShape(nearbyLabels, serverLevel, event.getEntity(),  0, event.getPos());
+            var pair = RayTraceUtils.rayTraceVoxelShape(nearbyLabels, serverLevel, event.getEntity(),  0, isHoldingAccessor ? null : event.getPos());
             if (pair != null) {
-                if (event.getItemStack().getItem() instanceof TransferLabelItem){
-                    event.setCanceled(true);
-                    event.setCancellationResult(InteractionResult.SUCCESS);
-                    if (event.getEntity() instanceof ServerPlayer serverPlayer) {
-                        serverPlayer.openMenu(pair.getFirst().getLabels().get(pair.getSecond()), (buffer) -> LocatorFactory.writePacketBuffer(buffer, new LabelLocatorInstance(event.getPos(), pair.getSecond())));//TODO SYNC LABEL
-                    }
-                } else {
-
+                event.setCanceled(true);
+                event.setCancellationResult(InteractionResult.SUCCESS);
+                if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+                    serverPlayer.openMenu(pair.getFirst().getLabels().get(pair.getSecond()), (buffer) -> LocatorFactory.writePacketBuffer(buffer, new LabelLocatorInstance(pair.getFirst().getPos(), pair.getSecond())));
                 }
             }
         }
@@ -70,11 +70,13 @@ public class LabelInteractEvents {
 
     @SubscribeEvent
     public void onLeftClick(PlayerInteractEvent.LeftClickBlock event) {
-        if (event.getItemStack().getItem() instanceof TransferLabelItem && event.getAction() == PlayerInteractEvent.LeftClickBlock.Action.START){
+        var isHoldingAccessor = Minecraft.getInstance().player.getItemInHand(InteractionHand.MAIN_HAND).is(TransferLabels.LABEL_ACCESSOR.get());
+        var validInteraction =  event.getItemStack().getItem() instanceof TransferLabelItem || isHoldingAccessor;
+        if (validInteraction && event.getAction() == PlayerInteractEvent.LeftClickBlock.Action.START){
             if (event.getLevel() instanceof ServerLevel serverLevel) {
                 var distance = event.getEntity().getAttribute(Attributes.BLOCK_INTERACTION_RANGE).getValue();
                 var nearbyLabels = LabelStorage.getNearbyLabels(serverLevel, event.getPos(), (int) (distance*distance));
-                var pair = RayTraceUtils.rayTraceVoxelShape(nearbyLabels, serverLevel, event.getEntity(),  0, event.getPos());
+                var pair = RayTraceUtils.rayTraceVoxelShape(nearbyLabels, serverLevel, event.getEntity(),  0, isHoldingAccessor ? null : event.getPos());
                 if (pair != null) {
                     event.setCanceled(true);
                     LabelStorage.removeLabel(event.getEntity(), serverLevel, pair.getFirst().getPos(), pair.getSecond());

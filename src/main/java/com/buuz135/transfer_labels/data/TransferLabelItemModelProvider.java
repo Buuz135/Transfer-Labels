@@ -26,6 +26,7 @@ public class TransferLabelItemModelProvider extends ItemModelProvider {
         generateItem(TransferLabels.ITEMSTACK_EXTRACT_LABEL.get());
         generateItem(TransferLabels.FLUIDSTACK_INSERT_LABEL.get());
         generateItem(TransferLabels.FLUIDSTACK_EXTRACT_LABEL.get());
+        generateItem(TransferLabels.LABEL_ACCESSOR.get());
     }
 
     private void generateItem(Item item) {

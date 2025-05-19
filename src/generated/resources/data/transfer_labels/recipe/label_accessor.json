@@ -1,0 +1,38 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:item_exists",
+      "item": "transfer_labels:label_accessor"
+    }
+  ],
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "C": [
+      {
+        "item": "transfer_labels:fluidstack_extract_transfer_label"
+      },
+      {
+        "item": "transfer_labels:itemstack_extract_transfer_label"
+      },
+      {
+        "item": "transfer_labels:itemstack_insert_transfer_label"
+      },
+      {
+        "item": "transfer_labels:fluidstack_insert_transfer_label"
+      }
+    ],
+    "R": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "pattern": [
+    "RCR",
+    " R ",
+    " R "
+  ],
+  "result": {
+    "count": 1,
+    "id": "transfer_labels:label_accessor"
+  }
+}
