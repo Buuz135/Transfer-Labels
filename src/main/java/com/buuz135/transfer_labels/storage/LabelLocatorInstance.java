@@ -20,10 +20,6 @@ public class LabelLocatorInstance extends LocatorInstance {
 
     public static final LocatorType LABEL = new LocatorType("transfer_label", LabelLocatorInstance::new);
 
-    static {
-        LocatorFactory.registerLocatorType(LABEL);
-    }
-
     private BlockPos pos;
     private Direction direction;
 

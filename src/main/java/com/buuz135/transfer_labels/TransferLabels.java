@@ -9,10 +9,12 @@ import com.buuz135.transfer_labels.item.ItemStackTransferLabelItem;
 import com.buuz135.transfer_labels.item.TransferLabelItem;
 import com.buuz135.transfer_labels.packet.LabelSyncPacket;
 import com.buuz135.transfer_labels.packet.SingleLabelSyncPacket;
+import com.buuz135.transfer_labels.storage.LabelLocatorInstance;
 import com.hrznstudio.titanium.event.handler.EventManager;
 import com.hrznstudio.titanium.module.ModuleController;
 import com.hrznstudio.titanium.network.CompoundSerializableDataHandler;
 import com.hrznstudio.titanium.network.NetworkHandler;
+import com.hrznstudio.titanium.network.locator.LocatorFactory;
 import com.hrznstudio.titanium.tab.TitaniumTab;
 import com.mojang.logging.LogUtils;
 
@@ -40,6 +42,11 @@ public class TransferLabels extends ModuleController {
     public static TitaniumTab TAB = new TitaniumTab(ResourceLocation.fromNamespaceAndPath(MODID, "main"));
     public static NetworkHandler NETWORK = new NetworkHandler(MODID);
 
+    static {
+        NETWORK.registerMessage("label_sync_packet", LabelSyncPacket.class);
+        NETWORK.registerMessage("single_label_sync_packet", SingleLabelSyncPacket.class);
+        LocatorFactory.registerLocatorType(LabelLocatorInstance.LABEL);
+    }
 
     public static DeferredHolder<Item, Item> ITEMSTACK_INSERT_LABEL;
     public static DeferredHolder<Item, Item> ITEMSTACK_EXTRACT_LABEL;
@@ -49,9 +56,6 @@ public class TransferLabels extends ModuleController {
 
     public TransferLabels(Dist dist, IEventBus modEventBus, ModContainer modContainer) {
         super(modContainer);
-
-        NETWORK.registerMessage("label_sync_packet", LabelSyncPacket.class);
-        NETWORK.registerMessage("single_label_sync_packet", SingleLabelSyncPacket.class);
 
         if (dist.isClient()) NeoForge.EVENT_BUS.register(new LabelClientEvents());
         NeoForge.EVENT_BUS.register(new LabelInteractEvents());
