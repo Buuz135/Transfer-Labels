@@ -32,6 +32,8 @@ public class ScrollableScreenAddon extends BasicScreenAddon {
     private ScrollableSelectionHelper selectionHelper;
     private Supplier<IAssetType> assetType;
     private Rectangle area;
+    private int guiX;
+    private int guiY;
 
     public ScrollableScreenAddon(int posX, int posY, ScrollableSelectionHelper selectionHelper, Supplier<IAssetType> assetType) {
         super(posX, posY);
@@ -41,27 +43,30 @@ public class ScrollableScreenAddon extends BasicScreenAddon {
 
     @Override
     public int getXSize() {
-        return area != null ? area.width : 0;
+        return 20;
     }
 
     @Override
     public int getYSize() {
-        return area != null ? area.height : 0;
+        return 20;
     }
 
     @Override
-    public void drawBackgroundLayer(GuiGraphics guiGraphics, Screen screen, IAssetProvider iAssetProvider,  int guiX, int guiY, int mouseX, int mouseY, float partialTicks) {
+    public void drawBackgroundLayer(GuiGraphics guiGraphics, Screen screen, IAssetProvider iAssetProvider, int guiX, int guiY, int mouseX, int mouseY, float partialTicks) {
         if (assetType != null) {
             IAsset asset = iAssetProvider.getAsset(assetType.get());
             area = asset.getArea();
             AssetUtil.drawAsset(guiGraphics, screen, asset, this.getPosX() + guiX, this.getPosY() + guiY);
         }
+        this.guiX = guiX;
+        this.guiY = guiY;
     }
 
     @Override
     public void drawForegroundLayer(GuiGraphics guiGraphics, Screen screen, IAssetProvider iAssetProvider,  int guiX, int guiY, int mouseX, int mouseY, float partialTicks) {
-        if (this.isMouseOver((double)(mouseX - guiX), (double)(mouseY - guiY))) {
+        if (this.isMouseOver(mouseX, mouseY)) {
             AssetUtil.drawSelectingOverlay(guiGraphics, this.getPosX() + 2, this.getPosY() + 2, this.getPosX() + this.getXSize() - 2, this.getPosY() + this.getYSize() - 3);
+            guiGraphics.renderComponentTooltip(Minecraft.getInstance().font, getTooltipLines(), mouseX - guiX, mouseY - guiY);
         }
     }
 
@@ -72,6 +77,12 @@ public class ScrollableScreenAddon extends BasicScreenAddon {
     @Override
     public List<Component> getTooltipLines() {
         return selectionHelper.getFormattedOptions().stream().map(s -> Component.literal(s)).collect(Collectors.toList());
+    }
+
+    @Override
+    public boolean isMouseOver(double mouseX, double mouseY) {
+        return mouseX >= (guiX + (double)this.getPosX()) && mouseX <= (double)(guiX + this.getPosX() + this.getXSize())
+                && mouseY >= (guiY + (double)this.getPosY()) && mouseY <= (double)(guiY + this.getPosY() + this.getYSize());
     }
 
     @Override

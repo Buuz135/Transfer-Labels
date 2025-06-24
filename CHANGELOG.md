@@ -1,3 +1,7 @@
+# 0.1.4
+
+* Fixed scrolling on the top left of the GUI, closes #5
+
 # 0.1.3
 
 * Fixed Locator instance not being created on the client when playing on servers causing desyncs, closes #4

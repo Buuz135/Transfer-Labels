@@ -54,7 +54,10 @@ import java.util.List;
 import java.util.Objects;
 
 public class FluidFilterScreenAddon extends BasicScreenAddon {
+
     private final FluidFilter filter;
+    private int guiX;
+    private int guiY;
 
     public FluidFilterScreenAddon(FluidFilter filter) {
         super(filter.getFilterSlots()[0].getX(), filter.getFilterSlots()[0].getY());
@@ -71,6 +74,8 @@ public class FluidFilterScreenAddon extends BasicScreenAddon {
 
     public void drawBackgroundLayer(GuiGraphics guiGraphics, Screen screen, IAssetProvider provider, int guiX, int guiY, int mouseX, int mouseY, float partialTicks) {
         var i = 0;
+        this.guiX = guiX;
+        this.guiY = guiY;
         for(FilterSlot<FluidStack> filterSlot : this.filter.getFilterSlots()) {
             if (filterSlot != null) {
                 // Draw the slot background
@@ -197,7 +202,7 @@ public class FluidFilterScreenAddon extends BasicScreenAddon {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         Screen screen = Minecraft.getInstance().screen;
         if (screen instanceof AbstractContainerScreen && ((AbstractContainerScreen)screen).getMenu() instanceof ILocatable) {
-            if (!this.isMouseOver(mouseX - (double)((AbstractContainerScreen)screen).getGuiLeft(), mouseY - (double)((AbstractContainerScreen)screen).getGuiTop())) {
+            if (!this.isMouseOver(mouseX, mouseY)) {
                 return false;
             }
 
@@ -234,7 +239,7 @@ public class FluidFilterScreenAddon extends BasicScreenAddon {
 
             var i = 0;
             for(FilterSlot<FluidStack> filterSlot : this.filter.getFilterSlots()) {
-                if (filterSlot != null && mouseX > (filterSlot.getX() + 1) && mouseX < (filterSlot.getX() + 16) && mouseY > (filterSlot.getY() + 1) && mouseY <  (filterSlot.getY() + 16)) {
+                if (filterSlot != null && mouseX > (filterSlot.getX() + 1 + guiX) && mouseX < (filterSlot.getX() + 16 + guiX) && mouseY > (filterSlot.getY() + 1 + guiY) && mouseY <  (filterSlot.getY() + 16 + guiY)) {
                     if (filter.getFilterType() == FilterType.EXACT_COUNT || filter.getFilterType() == FilterType.REGULATING){
                         CompoundTag compoundNBT = new CompoundTag();
                         compoundNBT.putInt("FilterAmount", i);
@@ -258,6 +263,12 @@ public class FluidFilterScreenAddon extends BasicScreenAddon {
             }
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    @Override
+    public boolean isMouseOver(double mouseX, double mouseY) {
+        return mouseX >= (guiX + (double)this.getPosX()) && mouseX <= (double)(guiX + this.getPosX() + this.getXSize())
+                && mouseY >= (guiY + (double)this.getPosY()) && mouseY <= (double)(guiY + this.getPosY() + this.getYSize());
     }
 
     public static void renderScrollingString(GuiGraphics guiGraphics, Font font, Component text, int minX, int minY, int maxX, int maxY, int color) {

@@ -2,16 +2,13 @@ package com.buuz135.transfer_labels.storage;
 
 import com.buuz135.transfer_labels.TransferLabels;
 import com.buuz135.transfer_labels.client.TLAssetProvider;
+import com.buuz135.transfer_labels.container.TransferLabelBasicAddonContainer;
 import com.buuz135.transfer_labels.filter.FilterType;
 import com.buuz135.transfer_labels.filter.ILabelFilter;
-import com.buuz135.transfer_labels.gui.ScrollableScreenAddon;
-import com.buuz135.transfer_labels.gui.ScrollableSelectionHelper;
 import com.buuz135.transfer_labels.gui.SmallTextScreenAddon;
 import com.buuz135.transfer_labels.item.TransferLabelItem;
-import com.buuz135.transfer_labels.packet.LabelSyncPacket;
-import com.buuz135.transfer_labels.packet.SingleLabelSyncPacket;
+
 import com.hrznstudio.titanium.api.IFactory;
-import com.hrznstudio.titanium.api.client.AssetTypes;
 import com.hrznstudio.titanium.api.client.IScreenAddon;
 import com.hrznstudio.titanium.api.client.IScreenAddonProvider;
 import com.hrznstudio.titanium.api.filter.IFilter;
@@ -133,7 +130,7 @@ public class LabelInstance implements IScreenAddonProvider, MenuProvider, IButto
 
     @Override
     public @Nullable AbstractContainerMenu createMenu(int menu, Inventory inventoryPlayer, Player entityPlayer) {
-       return new BasicAddonContainer(this, new LabelLocatorInstance(this.pos, this.facing), ContainerLevelAccess.create(this.level, this.pos), inventoryPlayer, menu);
+       return new TransferLabelBasicAddonContainer(this, new LabelLocatorInstance(this.pos, this.facing), ContainerLevelAccess.create(this.level, this.pos), inventoryPlayer, menu);
     }
 
     public ItemStack getLabel() {

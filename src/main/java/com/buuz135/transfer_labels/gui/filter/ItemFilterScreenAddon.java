@@ -25,11 +25,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -38,14 +36,15 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.registries.NeoForgeRegistries;
-import org.checkerframework.checker.units.qual.C;
 
 import java.awt.*;
 import java.util.Objects;
 
 public class ItemFilterScreenAddon extends BasicScreenAddon {
+
     private final ItemFilter filter;
+    private int guiX;
+    private int guiY;
 
     public ItemFilterScreenAddon(ItemFilter filter) {
         super(filter.getFilterSlots()[0].getX(), filter.getFilterSlots()[0].getY());
@@ -62,6 +61,8 @@ public class ItemFilterScreenAddon extends BasicScreenAddon {
 
     public void drawBackgroundLayer(GuiGraphics guiGraphics, Screen screen, IAssetProvider provider, int guiX, int guiY, int mouseX, int mouseY, float partialTicks) {
         var i = 0;
+        this.guiX = guiX;
+        this.guiY = guiY;
         for(FilterSlot<ItemStack> filterSlot : this.filter.getFilterSlots()) {
             if (filterSlot != null) {
                 // Draw the slot background
@@ -161,7 +162,7 @@ public class ItemFilterScreenAddon extends BasicScreenAddon {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         Screen screen = Minecraft.getInstance().screen;
         if (screen instanceof AbstractContainerScreen && ((AbstractContainerScreen)screen).getMenu() instanceof ILocatable) {
-            if (!this.isMouseOver(mouseX - (double)((AbstractContainerScreen)screen).getGuiLeft(), mouseY - (double)((AbstractContainerScreen)screen).getGuiTop())) {
+            if (!this.isMouseOver(mouseX, mouseY)) {
                 return false;
             }
 
@@ -191,7 +192,7 @@ public class ItemFilterScreenAddon extends BasicScreenAddon {
 
             var i = 0;
             for(FilterSlot<ItemStack> filterSlot : this.filter.getFilterSlots()) {
-                if (filterSlot != null && mouseX > (filterSlot.getX() + 1) && mouseX < (filterSlot.getX() + 16) && mouseY > (filterSlot.getY() + 1) && mouseY <  (filterSlot.getY() + 16)) {
+                if (filterSlot != null && mouseX > (filterSlot.getX() + 1 + guiX) && mouseX < (filterSlot.getX() + 16 + guiX) && mouseY > (filterSlot.getY() + 1 + guiY) && mouseY <  (filterSlot.getY() + 16 + guiY)) {
                     if (filter.getFilterType() == FilterType.EXACT_COUNT || filter.getFilterType() == FilterType.REGULATING){
                         CompoundTag compoundNBT = new CompoundTag();
                         compoundNBT.putInt("FilterAmount", i);
@@ -215,6 +216,12 @@ public class ItemFilterScreenAddon extends BasicScreenAddon {
             }
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    @Override
+    public boolean isMouseOver(double mouseX, double mouseY) {
+        return mouseX >= (guiX + (double)this.getPosX()) && mouseX <= (double)(guiX + this.getPosX() + this.getXSize())
+                && mouseY >= (guiY + (double)this.getPosY()) && mouseY <= (double)(guiY + this.getPosY() + this.getYSize());
     }
 
     public static void renderScrollingString(GuiGraphics guiGraphics, net.minecraft.client.gui.Font font, Component text, int minX, int minY, int maxX, int maxY, int color) {

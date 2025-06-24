@@ -1,6 +1,7 @@
 package com.buuz135.transfer_labels;
 
 import com.buuz135.transfer_labels.client.LabelClientEvents;
+import com.buuz135.transfer_labels.container.TransferLabelBasicAddonContainer;
 import com.buuz135.transfer_labels.data.TransferLabelItemModelProvider;
 import com.buuz135.transfer_labels.data.TransferLabelLangItemProvider;
 import com.buuz135.transfer_labels.data.TransferLabelRecipesProvider;
@@ -9,6 +10,7 @@ import com.buuz135.transfer_labels.item.ItemStackTransferLabelItem;
 import com.buuz135.transfer_labels.item.TransferLabelItem;
 import com.buuz135.transfer_labels.packet.LabelSyncPacket;
 import com.buuz135.transfer_labels.packet.SingleLabelSyncPacket;
+import com.buuz135.transfer_labels.screen.LabelAddonScreen;
 import com.buuz135.transfer_labels.storage.LabelLocatorInstance;
 import com.hrznstudio.titanium.event.handler.EventManager;
 import com.hrznstudio.titanium.module.ModuleController;
@@ -21,13 +23,16 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.data.event.GatherDataEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import org.slf4j.Logger;
@@ -57,7 +62,12 @@ public class TransferLabels extends ModuleController {
     public TransferLabels(Dist dist, IEventBus modEventBus, ModContainer modContainer) {
         super(modContainer);
 
-        if (dist.isClient()) NeoForge.EVENT_BUS.register(new LabelClientEvents());
+        if (dist.isClient()) {
+            NeoForge.EVENT_BUS.register(new LabelClientEvents());
+            modEventBus.addListener((final RegisterMenuScreensEvent event) -> {
+                event.register((MenuType<? extends TransferLabelBasicAddonContainer>) TransferLabelBasicAddonContainer.LABEL_TYPE.get(), LabelAddonScreen::new);
+            });
+        }
         NeoForge.EVENT_BUS.register(new LabelInteractEvents());
 
         EventManager.mod(GatherDataEvent.class).process(this::dataGen).subscribe();
@@ -78,6 +88,8 @@ public class TransferLabels extends ModuleController {
             TAB.getTabList().add(item);
             return item;
         });
+
+        TransferLabelBasicAddonContainer.LABEL_TYPE = getRegistries().registerGeneric(Registries.MENU, "label_addon_container", () -> (MenuType) IMenuTypeExtension.create(TransferLabelBasicAddonContainer::create));
     }
 
     public void dataGen(GatherDataEvent event) {
