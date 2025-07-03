@@ -241,7 +241,7 @@ public class FluidFilter implements ILabelFilter<FluidStack>{
     public void work(Level level, BlockPos pos, Direction direction, int amount) {
         Direction oppositeDirection = direction.getOpposite();
         BlockPos oppositePos = pos.relative(direction);
-
+        if (!level.isLoaded(pos) || !level.isLoaded(oppositePos)) return;
         // Get the fluid handlers for both block entities
         IFluidHandler sourceHandler = null;
         IFluidHandler targetHandler = null;

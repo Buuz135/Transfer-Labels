@@ -1,3 +1,7 @@
+# 0.1.5
+
+* Labels shouldn't load chunks anymore
+
 # 0.1.4
 
 * Fixed scrolling on the top left of the GUI, closes #5

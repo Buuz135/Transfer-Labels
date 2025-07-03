@@ -3,6 +3,7 @@ package com.buuz135.transfer_labels;
 import com.buuz135.transfer_labels.client.RayTraceUtils;
 import com.buuz135.transfer_labels.item.TransferLabelItem;
 import com.buuz135.transfer_labels.packet.LabelSyncPacket;
+import com.buuz135.transfer_labels.storage.LabelBlock;
 import com.buuz135.transfer_labels.storage.LabelLocatorInstance;
 import com.buuz135.transfer_labels.storage.LabelStorage;
 import com.hrznstudio.titanium.network.locator.LocatorFactory;
@@ -30,7 +31,12 @@ public class LabelInteractEvents {
     @SubscribeEvent
     public void onTick(LevelTickEvent.Pre event) {
         if (event.getLevel() instanceof ServerLevel serverLevel) {
-            LabelStorage.getStorageFor(serverLevel).getLabelBlocks().forEach(labelBlock -> labelBlock.getLabels().forEach( (direction, label) -> label.work(serverLevel)));
+            for (LabelBlock value : LabelStorage.getStorageFor(serverLevel).getLabelBlocksMap().values()) {
+                if (serverLevel.isLoaded(value.getPos())) {
+                    value.getLabels().forEach((direction, label) -> label.work(serverLevel));
+                }
+            }
+            //LabelStorage.getStorageFor(serverLevel).getLabelBlocks().forEach(labelBlock -> labelBlock.getLabels().forEach( (direction, label) -> label.work(serverLevel)));
             if (event.getLevel().getGameTime() % 20 == 0) {
                 serverLevel.players().forEach(player -> {
                     TransferLabels.NETWORK.sendTo(new LabelSyncPacket(serverLevel.getLevel().dimension().location(), LabelStorage.getStorageFor(serverLevel).save(new CompoundTag(), serverLevel.registryAccess())), player);

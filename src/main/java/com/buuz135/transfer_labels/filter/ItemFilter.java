@@ -234,6 +234,7 @@ public class ItemFilter implements ILabelFilter<ItemStack>{
     public void work(Level level, BlockPos pos, Direction direction, int amount) {
         Direction oppositeDirection = direction.getOpposite();
         BlockPos oppositePos = pos.relative(direction);
+        if (!level.isLoaded(pos) || !level.isLoaded(oppositePos)) return;
 
         // Get the item handlers for both block entities
         IItemHandler sourceHandler = null;
