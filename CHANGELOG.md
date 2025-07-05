@@ -1,3 +1,7 @@
+# 0.1.6
+
+* Fixed Label Accessor Recipe using redstone instead of copper
+
 # 0.1.5
 
 * Labels shouldn't load chunks anymore

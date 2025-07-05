@@ -23,7 +23,7 @@
       }
     ],
     "R": {
-      "item": "minecraft:redstone"
+      "tag": "c:ingots/copper"
     }
   },
   "pattern": [

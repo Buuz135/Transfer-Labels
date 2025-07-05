@@ -1,0 +1,23 @@
+{
+  "filter.type.exact_count": "精确数量过滤器",
+  "filter.type.exact_count.tooltip": "仅在数量满足过滤器定义值时传输",
+  "filter.type.mod": "模组过滤器",
+  "filter.type.mod.tooltip": "仅在模组ID与过滤器定义值相同时传输",
+  "filter.type.normal": "普通过滤器",
+  "filter.type.normal.tooltip": "仅在对象与过滤器定义值相同时传输",
+  "filter.type.regulating": "调节过滤器",
+  "filter.type.regulating.tooltip": "保持目标容器中对象数量符合过滤器定义值",
+  "filter.type.scroll": "*滚动滚轮以切换过滤器类型*",
+  "filter.type.tag": "标签过滤器",
+  "filter.type.tag.tooltip": "仅在标签与过滤器定义值相同时传输",
+  "item.transfer_labels.fluidstack_extract_transfer_label": "流体提取传输标贴",
+  "item.transfer_labels.fluidstack_insert_transfer_label": "流体存入传输标贴",
+  "item.transfer_labels.itemstack_extract_transfer_label": "物品提取传输标贴",
+  "item.transfer_labels.itemstack_insert_transfer_label": "物品存入传输标贴",
+  "item.transfer_labels.label_accessor": "标贴访问器",
+  "itemGroup.transfer_labels": "传输标贴",
+  "tooltip.transfer_labels.blacklist": "黑名单",
+  "tooltip.transfer_labels.slot.amount": "数量",
+  "tooltip.transfer_labels.slot.speed": "速度",
+  "tooltip.transfer_labels.whitelist": "白名单"
+}

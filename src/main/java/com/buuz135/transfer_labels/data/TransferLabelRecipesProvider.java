@@ -69,7 +69,7 @@ public class TransferLabelRecipesProvider extends RecipeProvider {
                 .save(output, "transfer_labels:fluidstack_insert_label_to_fluidstack_extract_label");
         TitaniumShapedRecipeBuilder.shapedRecipe(TransferLabels.LABEL_ACCESSOR.get(),1)
                 .pattern("RCR").pattern(" R ").pattern(" R ")
-                .define('R', Items.REDSTONE)
+                .define('R', Tags.Items.INGOTS_COPPER)
                 .define('C', Ingredient.of(TransferLabels.FLUIDSTACK_EXTRACT_LABEL.get(), TransferLabels.ITEMSTACK_EXTRACT_LABEL.get(), TransferLabels.ITEMSTACK_INSERT_LABEL.get(), TransferLabels.FLUIDSTACK_INSERT_LABEL.get()))
                 .save(output);
     }
