@@ -19,7 +19,9 @@
     }
   },
   "pattern": [
-    "HCR"
+    " H ",
+    " C ",
+    " R "
   ],
   "result": {
     "count": 2,

@@ -19,7 +19,9 @@
     }
   },
   "pattern": [
-    "RCH"
+    " R ",
+    " C ",
+    " H "
   ],
   "result": {
     "count": 2,

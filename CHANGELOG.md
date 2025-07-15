@@ -1,6 +1,7 @@
 # 0.1.6
 
 * Fixed Label Accessor Recipe using redstone instead of copper
+* Changed recipes orentation
 
 # 0.1.5
 
