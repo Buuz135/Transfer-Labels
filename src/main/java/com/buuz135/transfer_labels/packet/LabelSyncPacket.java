@@ -5,6 +5,7 @@ import com.buuz135.transfer_labels.storage.client.LabelClientStorage;
 import com.hrznstudio.titanium.network.CompoundSerializableDataHandler;
 import com.hrznstudio.titanium.network.Message;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.dimension.DimensionType;
@@ -22,10 +23,14 @@ public class LabelSyncPacket extends Message {
 
     public ResourceLocation location;
     public CompoundTag labels;
+    public BlockPos anchor;
+    public int distance;
 
-    public LabelSyncPacket(ResourceLocation location, CompoundTag compoundTag) {
+    public LabelSyncPacket(ResourceLocation location, CompoundTag compoundTag, BlockPos anchor, int distance) {
         this.location = location;
         this.labels = compoundTag;
+        this.anchor = anchor;
+        this.distance = distance;
     }
 
     public LabelSyncPacket() {
@@ -35,7 +40,7 @@ public class LabelSyncPacket extends Message {
     @Override
     protected void handleMessage(IPayloadContext context) {
         context.enqueueWork(() -> {
-            LabelClientStorage.LABELS.computeIfAbsent(location, dimensionType -> new LabelStorage(Minecraft.getInstance().level)).load(this.labels, Minecraft.getInstance().level.registryAccess()); //TODO IMPROVE LEVEL
+            LabelClientStorage.LABELS.computeIfAbsent(location, dimensionType -> new LabelStorage(Minecraft.getInstance().level)).loadNearby(anchor, distance, this.labels, Minecraft.getInstance().level.registryAccess()); //TODO IMPROVE LEVEL
         });
     }
 }

@@ -38,8 +38,7 @@ public abstract class TransferLabelItem extends Item {
         if (context.getLevel() instanceof ServerLevel serverLevel) {
             LabelStorage.addLabel(serverLevel, context.getClickedPos(), context.getClickedFace(), context.getItemInHand().copyWithCount(1));
             context.getItemInHand().shrink(1);
-            TransferLabels.NETWORK.sendTo(new LabelSyncPacket(serverLevel.getLevel().dimension().location(), LabelStorage.getStorageFor(serverLevel).save(new CompoundTag(), serverLevel.registryAccess())), (ServerPlayer) context.getPlayer());
-
+            TransferLabels.NETWORK.sendTo(new LabelSyncPacket(serverLevel.getLevel().dimension().location(), LabelStorage.getStorageFor(serverLevel).saveNearby(context.getPlayer().getOnPos(), 16, serverLevel.registryAccess()), context.getPlayer().getOnPos(), 16), (ServerPlayer) context.getPlayer());
             return InteractionResult.SUCCESS;
         }
 

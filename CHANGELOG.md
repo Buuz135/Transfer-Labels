@@ -1,3 +1,7 @@
+# 0.1.7
+
+* Changed label syncing to the client so only nearby labels are synced
+
 # 0.1.6
 
 * Fixed Label Accessor Recipe using redstone instead of copper

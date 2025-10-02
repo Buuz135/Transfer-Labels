@@ -37,9 +37,9 @@ public class LabelInteractEvents {
                 }
             }
             //LabelStorage.getStorageFor(serverLevel).getLabelBlocks().forEach(labelBlock -> labelBlock.getLabels().forEach( (direction, label) -> label.work(serverLevel)));
-            if (event.getLevel().getGameTime() % 20 == 0) {
+            if (event.getLevel().getGameTime() % 10 == 0) {
                 serverLevel.players().forEach(player -> {
-                    TransferLabels.NETWORK.sendTo(new LabelSyncPacket(serverLevel.getLevel().dimension().location(), LabelStorage.getStorageFor(serverLevel).save(new CompoundTag(), serverLevel.registryAccess())), player);
+                    TransferLabels.NETWORK.sendTo(new LabelSyncPacket(serverLevel.getLevel().dimension().location(), LabelStorage.getStorageFor(serverLevel).saveNearby(player.getOnPos(), 16, serverLevel.registryAccess()), player.getOnPos(), 16), player);
                 });
             }
         }
@@ -86,7 +86,7 @@ public class LabelInteractEvents {
                 if (pair != null) {
                     event.setCanceled(true);
                     LabelStorage.removeLabel(event.getEntity(), serverLevel, pair.getFirst().getPos(), pair.getSecond());
-                    TransferLabels.NETWORK.sendTo(new LabelSyncPacket(serverLevel.getLevel().dimension().location(), LabelStorage.getStorageFor(serverLevel).save(new CompoundTag(), serverLevel.registryAccess())), (ServerPlayer) event.getEntity());
+                    TransferLabels.NETWORK.sendTo(new LabelSyncPacket(serverLevel.getLevel().dimension().location(), LabelStorage.getStorageFor(serverLevel).saveNearby(event.getEntity().getOnPos(), 16, serverLevel.registryAccess()), event.getEntity().getOnPos(), 16), (ServerPlayer) event.getEntity());
                     event.getEntity().playNotifySound(SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 1, 1);
                     SERVER_UPDATE.add(new DelayedEvent(event, serverLevel.getGameTime()));
                 }

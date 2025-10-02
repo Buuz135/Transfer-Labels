@@ -10,6 +10,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -69,6 +70,35 @@ public class LabelStorage extends SavedData {
         setDirty();
     }
 
+    public CompoundTag saveNearby(BlockPos pos, int distance, HolderLookup.Provider provider){
+        CompoundTag compoundTag = new CompoundTag();
+        getLabelBlocks().stream().filter(labelBlock -> labelBlock.getPos().distSqr(pos) <= distance).forEach(labelBlock -> {
+            compoundTag.put(labelBlock.getPos().asLong() + "", labelBlock.serializeNBT(provider));
+        });
+        return compoundTag;
+    }
+
+    public void loadNearby(BlockPos anchor, int distance, CompoundTag compoundTag, HolderLookup.Provider provider){
+        var nearby = getLabelBlocks().stream().filter(labelBlock -> labelBlock.getPos().distSqr(anchor) <= distance).toList();
+        List<BlockPos> visitedPositions = new ArrayList<>();
+        compoundTag.getAllKeys().forEach(s -> {
+           var pos = BlockPos.of(Long.parseLong(s));
+            visitedPositions.add(pos);
+           if (labelBlocks.containsKey(pos)) {
+               labelBlocks.get(pos).deserializeNBT(provider, compoundTag.getCompound(s));
+           } else {
+               var label = new LabelBlock(pos, level);
+               label.deserializeNBT(provider, compoundTag.getCompound(s));
+               labelBlocks.put(pos, label);
+           }
+        });
+        nearby.forEach(labelBlock -> {
+            if (!visitedPositions.contains(labelBlock.getPos())) {
+                labelBlocks.remove(labelBlock.getPos());
+            }
+        });
+    }
+
     @Override
     public CompoundTag save(CompoundTag compoundTag, HolderLookup.Provider provider) {
         CompoundTag labels = new CompoundTag();
@@ -80,7 +110,7 @@ public class LabelStorage extends SavedData {
     public void load(CompoundTag compoundTag, HolderLookup.Provider provider) {
         //labelBlocks = new HashMap<>();
         CompoundTag labels = compoundTag.getCompound("Labels");
-        List<BlockPos> visitedPositions = new java.util.ArrayList<>();
+        List<BlockPos> visitedPositions = new ArrayList<>();
         labels.getAllKeys().forEach(s -> {
             var pos = BlockPos.of(Long.parseLong(s));
             visitedPositions.add(pos);
