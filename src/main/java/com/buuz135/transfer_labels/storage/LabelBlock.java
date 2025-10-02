@@ -83,7 +83,7 @@ public class LabelBlock implements INBTSerializable<CompoundTag> {
 
     public void updateToNearby(Player player){
         if (player.level() instanceof ServerLevel serverLevel){
-            TransferLabels.NETWORK.sendToNearby(level, pos, 32, new SingleLabelSyncPacket(serverLevel.dimension().location(), pos, this.serializeNBT(level.registryAccess())));
+            TransferLabels.NETWORK.sendToNearby(level, pos, 32, new SingleLabelSyncPacket(pos, this.serializeNBT(level.registryAccess())));
             LabelStorage.getStorageFor(serverLevel).markDirty();
         }
     }

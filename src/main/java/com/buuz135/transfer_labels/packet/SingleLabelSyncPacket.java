@@ -15,12 +15,10 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 public class SingleLabelSyncPacket extends Message {
 
 
-    public ResourceLocation location;
     public BlockPos pos;
     public CompoundTag label;
 
-    public SingleLabelSyncPacket(ResourceLocation location, BlockPos pos, CompoundTag compoundTag) {
-        this.location = location;
+    public SingleLabelSyncPacket(BlockPos pos, CompoundTag compoundTag) {
         this.pos = pos;
         this.label = compoundTag;
     }
@@ -32,7 +30,7 @@ public class SingleLabelSyncPacket extends Message {
     @Override
     protected void handleMessage(IPayloadContext context) {
         context.enqueueWork(() -> {
-            LabelClientStorage.LABELS.computeIfAbsent(location, dimensionType -> new LabelStorage(Minecraft.getInstance().level)) //TODO IMPROVE LEVEL
+            LabelClientStorage.getStorage(Minecraft.getInstance().level)
                     .getLabelBlocksMap().computeIfAbsent(pos, blockPos -> new LabelBlock(blockPos, Minecraft.getInstance().level)).deserializeNBT(Minecraft.getInstance().level.registryAccess(), label);
         });
     }

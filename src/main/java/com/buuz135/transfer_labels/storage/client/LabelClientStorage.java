@@ -23,14 +23,17 @@ import java.util.stream.Collectors;
 
 public class LabelClientStorage {
 
-    public static HashMap<ResourceLocation, LabelStorage> LABELS = new HashMap<>();
+    public static LabelStorage LABELS;
 
     public static List<LabelBlock> getLabelBlocks(ClientLevel clientLevel) {
-        return LABELS.computeIfAbsent(clientLevel.dimension().location(), dimensionType -> new LabelStorage(clientLevel)).getLabelBlocks();
+        return getStorage(clientLevel).getLabelBlocks();
     }
 
     public static LabelStorage getStorage(ClientLevel clientLevel) {
-        return LABELS.computeIfAbsent(clientLevel.dimension().location(), dimensionType -> new LabelStorage(clientLevel));
+        if (LABELS == null || !LABELS.getLevel().equals(clientLevel)) {
+            LABELS = new LabelStorage(clientLevel);
+        }
+        return LABELS;
     }
 
     public static List<LabelBlock> getNearbyLabels(ClientLevel level, BlockPos pos, int distance) {

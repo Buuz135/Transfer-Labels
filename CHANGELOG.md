@@ -1,6 +1,7 @@
 # 0.1.7
 
 * Changed label syncing to the client so only nearby labels are synced
+* Changed how labels are stored in the client, closes #7
 
 # 0.1.6
 

@@ -124,4 +124,8 @@ public class LabelStorage extends SavedData {
         });
         this.labelBlocks.keySet().removeIf(pos -> !visitedPositions.contains(pos));
     }
+
+    public Level getLevel() {
+        return level;
+    }
 }

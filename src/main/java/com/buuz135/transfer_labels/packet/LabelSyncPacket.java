@@ -13,6 +13,8 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
+import java.util.HashMap;
+
 public class LabelSyncPacket extends Message {
 
     static {
@@ -21,13 +23,11 @@ public class LabelSyncPacket extends Message {
                 (buf, type) -> buf.writeJsonWithCodec(DimensionType.DIRECT_CODEC, type));
     }
 
-    public ResourceLocation location;
     public CompoundTag labels;
     public BlockPos anchor;
     public int distance;
 
-    public LabelSyncPacket(ResourceLocation location, CompoundTag compoundTag, BlockPos anchor, int distance) {
-        this.location = location;
+    public LabelSyncPacket(CompoundTag compoundTag, BlockPos anchor, int distance) {
         this.labels = compoundTag;
         this.anchor = anchor;
         this.distance = distance;
@@ -40,7 +40,7 @@ public class LabelSyncPacket extends Message {
     @Override
     protected void handleMessage(IPayloadContext context) {
         context.enqueueWork(() -> {
-            LabelClientStorage.LABELS.computeIfAbsent(location, dimensionType -> new LabelStorage(Minecraft.getInstance().level)).loadNearby(anchor, distance, this.labels, Minecraft.getInstance().level.registryAccess()); //TODO IMPROVE LEVEL
+            LabelClientStorage.getStorage(Minecraft.getInstance().level).loadNearby(anchor, distance, this.labels, Minecraft.getInstance().level.registryAccess());
         });
     }
 }
