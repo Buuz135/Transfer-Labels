@@ -1,0 +1,23 @@
+{
+  "filter.type.exact_count": "Filtre de quantité exacte",
+  "filter.type.exact_count.tooltip": "Transférer uniquement si la quantité est identique à celle définie dans le filtre",
+  "filter.type.mod": "Filtre de mod",
+  "filter.type.mod.tooltip": "Transférer uniquement si l'ID du mod est identique à celui défini dans le filtre",
+  "filter.type.normal": "Filtre normal",
+  "filter.type.normal.tooltip": "Transférer uniquement si l'objet est identique à celui du filtre",
+  "filter.type.regulating": "Filtre de régulation",
+  "filter.type.regulating.tooltip": "Transférer pour maintenir à destination la quantité définie par le filtre",
+  "filter.type.scroll": "*Faites défiler pour changer le type de filtre*",
+  "filter.type.tag": "Filtre de tag",
+  "filter.type.tag.tooltip": "Transférer uniquement si le tag est identique à celui défini dans le filtre",
+  "item.transfer_labels.fluidstack_extract_transfer_label": "Étiquette de transfert d'extraction de fluides",
+  "item.transfer_labels.fluidstack_insert_transfer_label": "Étiquette de transfert d'insertion de fluides",
+  "item.transfer_labels.itemstack_extract_transfer_label": "Étiquette de transfert d'extraction d'objets",
+  "item.transfer_labels.itemstack_insert_transfer_label": "Étiquette de transfert d'insertion d'objets",
+  "item.transfer_labels.label_accessor": "Accesseur d'étiquette",
+  "itemGroup.transfer_labels": "Étiquettes de transfert",
+  "tooltip.transfer_labels.blacklist": "Liste noire",
+  "tooltip.transfer_labels.slot.amount": "Quantité",
+  "tooltip.transfer_labels.slot.speed": "Vitesse",
+  "tooltip.transfer_labels.whitelist": "Liste blanche"
+}
