@@ -1,5 +1,6 @@
 package com.buuz135.transfer_labels.filter;
 
+import com.buuz135.transfer_labels.Config;
 import com.buuz135.transfer_labels.client.TLAssetTypes;
 import com.buuz135.transfer_labels.filter.extras.FluidTagFilterExtra;
 import com.buuz135.transfer_labels.filter.extras.NumberFilterExtra;
@@ -22,7 +23,6 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -32,7 +32,6 @@ import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.common.util.INBTSerializable;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.FluidType;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 
 import java.util.ArrayList;
@@ -183,7 +182,10 @@ public class FluidFilter implements ILabelFilter<FluidStack>{
             filterSlot.setFilter(FluidStack.EMPTY);
         }
         for (String key : filter.getAllKeys()) {
-            this.filter[Integer.parseInt(key)].setFilter(FluidStack.parseOptional(provider, filter.getCompound(key)));
+            int slot = Integer.parseInt(key);
+            if (slot >= 0 && slot < this.filter.length) {
+                this.filter[slot].setFilter(FluidStack.parseOptional(provider, filter.getCompound(key)));
+            }
         }
         this.type = Type.valueOf(nbt.getString("Type"));
         this.filterType = FilterType.getByName(nbt.getString("FilterType"));
@@ -258,7 +260,7 @@ public class FluidFilter implements ILabelFilter<FluidStack>{
         if (sourceHandler == null || targetHandler == null) return;
 
         // Transfer fluids from the source to the target
-        transferFluids(sourceHandler, targetHandler, amount * 100);
+        transferFluids(sourceHandler, targetHandler, (int) Math.min(Integer.MAX_VALUE, (long) amount * Config.fluidTransferMultiplier));
     }
 
     private void transferFluids(IFluidHandler sourceHandler, IFluidHandler targetHandler, int defaultMaxAmount) {

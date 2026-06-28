@@ -1,9 +1,9 @@
 package com.buuz135.transfer_labels.item;
 
+import com.buuz135.transfer_labels.Config;
 import com.buuz135.transfer_labels.filter.ILabelFilter;
 import com.buuz135.transfer_labels.filter.ItemFilter;
 import com.hrznstudio.titanium.api.filter.FilterSlot;
-import com.hrznstudio.titanium.api.filter.IFilter;
 import net.minecraft.world.item.ItemStack;
 
 public class ItemStackTransferLabelItem extends TransferLabelItem {
@@ -14,7 +14,7 @@ public class ItemStackTransferLabelItem extends TransferLabelItem {
 
     @Override
     public ILabelFilter<ItemStack> createFilter() {
-        var filter = new ItemFilter("item_filter", 5*4, this.getMode());
+        var filter = new ItemFilter("item_filter", Config.filterSlots, this.getMode());
 
         int slotSize = 18;
         int startX = 43;

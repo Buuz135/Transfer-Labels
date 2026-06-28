@@ -1,10 +1,9 @@
 package com.buuz135.transfer_labels.item;
 
+import com.buuz135.transfer_labels.Config;
 import com.buuz135.transfer_labels.filter.FluidFilter;
 import com.buuz135.transfer_labels.filter.ILabelFilter;
-import com.buuz135.transfer_labels.filter.ItemFilter;
 import com.hrznstudio.titanium.api.filter.FilterSlot;
-import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 public class FluidStackTransferLabelItem extends TransferLabelItem {
@@ -15,7 +14,7 @@ public class FluidStackTransferLabelItem extends TransferLabelItem {
 
     @Override
     public ILabelFilter<FluidStack> createFilter() {
-        var filter = new FluidFilter("fluid_filter", 5*4, this.getMode());
+        var filter = new FluidFilter("fluid_filter", Config.filterSlots, this.getMode());
 
         int slotSize = 18;
         int startX = 43;

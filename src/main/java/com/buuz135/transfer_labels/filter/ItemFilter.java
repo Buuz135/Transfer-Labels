@@ -176,7 +176,10 @@ public class ItemFilter implements ILabelFilter<ItemStack>{
             filterSlot.setFilter(ItemStack.EMPTY);
         }
         for (String key : filter.getAllKeys()) {
-            this.filter[Integer.parseInt(key)].setFilter(ItemStack.parseOptional(provider, filter.getCompound(key)));
+            int slot = Integer.parseInt(key);
+            if (slot >= 0 && slot < this.filter.length) {
+                this.filter[slot].setFilter(ItemStack.parseOptional(provider, filter.getCompound(key)));
+            }
         }
         this.type = Type.valueOf(nbt.getString("Type"));
         this.filterType = FilterType.getByName(nbt.getString("FilterType"));

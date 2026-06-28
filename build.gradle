@@ -103,7 +103,7 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 
 dependencies {
-    implementation project.dependencies.create('com.hrznstudio:titanium:1.21-4.0.37')
+    implementation project.dependencies.create('com.hrznstudio:titanium:1.21-4.0.43')
     runtimeOnly "curse.maven:functional-storage-556861:6467726"
     runtimeOnly "curse.maven:ftb-library-forge-404465:6661421"
     runtimeOnly "curse.maven:architectury-api-419699:5786327"

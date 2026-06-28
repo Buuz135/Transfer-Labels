@@ -1,3 +1,7 @@
+# 0.1.8
+
+* Added config values, closes #6
+
 # 0.1.7
 
 * Changed label syncing to the client so only nearby labels are synced

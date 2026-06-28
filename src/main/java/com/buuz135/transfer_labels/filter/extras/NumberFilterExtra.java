@@ -40,7 +40,10 @@ public class NumberFilterExtra implements INBTSerializable<CompoundTag> {
     @Override
     public void deserializeNBT(HolderLookup.Provider provider, CompoundTag compoundTag) {
         compoundTag.getAllKeys().forEach(s -> {
-            this.extra.set(Integer.parseInt(s), compoundTag.getInt(s));
+            int slot = Integer.parseInt(s);
+            if (slot >= 0 && slot < this.extra.size()) {
+                this.extra.set(slot, compoundTag.getInt(s));
+            }
         });
     }
 }

@@ -1,5 +1,6 @@
 package com.buuz135.transfer_labels.storage;
 
+import com.buuz135.transfer_labels.Config;
 import com.buuz135.transfer_labels.TransferLabels;
 import com.buuz135.transfer_labels.client.TLAssetProvider;
 import com.buuz135.transfer_labels.container.TransferLabelBasicAddonContainer;
@@ -66,12 +67,12 @@ public class LabelInstance implements IScreenAddonProvider, MenuProvider, IButto
             this.filter = transferLabelItem.createFilter();
         }
         this.amountFilter = new InventoryComponent<LabelInstance>("amountFilter", 145, 30, 1)
-                .setSlotLimit(63)
+                .setSlotLimit(Config.amountUpgrades)
                 .setInputFilter((itemStack, integer) -> ItemStack.isSameItem(itemStack, label))
                 .setSlotToItemStackRender(0, label)
                 .setSlotToColorRender(0, DyeColor.PURPLE);
         this.speedFilter = new InventoryComponent<LabelInstance>("speedFilter", 145, 66, 1)
-                .setSlotLimit(38)
+                .setSlotLimit(Config.speedUpgrades)
                 .setInputFilter((itemStack, integer) -> ItemStack.isSameItem(itemStack, label))
                 .setSlotToItemStackRender(0, label)
                 .setSlotToColorRender(0, DyeColor.LIME);
@@ -158,15 +159,15 @@ public class LabelInstance implements IScreenAddonProvider, MenuProvider, IButto
     }
 
     public void work(Level level){
-        if (this.filter != null && level.getGameTime() % (20 - getSpeed()) == 0) this.filter.work(level, this.pos, this.facing, 1 + getAmount());
+        if (this.filter != null && level.getGameTime() % (20 - getSpeed()) == 0) this.filter.work(level, this.pos, this.facing, Config.baseItemTransferAmount + getAmount());
     }
 
     public int getSpeed() {
-        return this.speedFilter.getStackInSlot(0).getCount() / 2;
+        return Math.min(this.speedFilter.getStackInSlot(0).getCount(), Config.speedUpgrades) / 2;
     }
 
     public int getAmount() {
-        return this.amountFilter.getStackInSlot(0).getCount();
+        return Math.min(this.amountFilter.getStackInSlot(0).getCount(), Config.amountUpgrades);
     }
 
     @Override
