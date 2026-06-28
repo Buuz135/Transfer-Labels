@@ -1,6 +1,7 @@
 # 0.1.8
 
 * Added config values, closes #6
+* French translation - Desoroxxx
 
 # 0.1.7
 
