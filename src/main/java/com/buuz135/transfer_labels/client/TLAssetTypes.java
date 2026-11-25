@@ -6,7 +6,6 @@ import com.hrznstudio.titanium.api.client.GenericAssetType;
 import com.hrznstudio.titanium.api.client.IAsset;
 import com.hrznstudio.titanium.api.client.IAssetType;
 import com.hrznstudio.titanium.client.screen.asset.IAssetProvider;
-import net.minecraft.resources.ResourceLocation;
 
 import java.awt.*;
 

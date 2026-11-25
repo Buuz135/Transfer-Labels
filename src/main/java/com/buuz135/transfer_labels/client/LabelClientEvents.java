@@ -3,260 +3,187 @@ package com.buuz135.transfer_labels.client;
 import com.buuz135.transfer_labels.LabelInteractEvents;
 import com.buuz135.transfer_labels.TransferLabels;
 import com.buuz135.transfer_labels.item.TransferLabelItem;
-import com.buuz135.transfer_labels.packet.LabelSyncPacket;
-import com.buuz135.transfer_labels.storage.LabelLocatorInstance;
-import com.buuz135.transfer_labels.storage.LabelStorage;
 import com.buuz135.transfer_labels.storage.client.LabelClientStorage;
-import com.hrznstudio.titanium.network.locator.LocatorFactory;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.*;
+import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.*;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.ShapeRenderer;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.state.level.BlockOutlineRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.LightCoordsUtil;
+import net.minecraft.util.Util;
+import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.Shapes;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.event.RenderHighlightEvent;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.event.ExtractBlockOutlineRenderStateEvent;
+import net.neoforged.neoforge.client.event.ExtractLevelRenderStateEvent;
+import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
+import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
 
 public class LabelClientEvents {
 
+    private static final ContextKey<List<LabelRenderData>> LABEL_RENDER_DATA = new ContextKey<>(Identifier.fromNamespaceAndPath(TransferLabels.MODID, "labels"));
+    private static final RenderPipeline LABEL_NO_DEPTH_PIPELINE = RenderPipeline.builder(RenderPipelines.ENTITY_EMISSIVE_SNIPPET)
+            .withLocation(Identifier.fromNamespaceAndPath(TransferLabels.MODID, "pipeline/label_no_depth"))
+            .withShaderDefine("ALPHA_CUTOUT", 0.1F)
+            .withShaderDefine("PER_FACE_LIGHTING")
+            .withSampler("Sampler1")
+            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withCull(false)
+            .withDepthStencilState(Optional.empty())
+            .build();
+    private static final Function<Identifier, RenderType> LABEL_NO_DEPTH_RENDER_TYPE = Util.memoize(texture -> RenderType.create(
+            "transfer_label_no_depth",
+            RenderSetup.builder(LABEL_NO_DEPTH_PIPELINE)
+                    .withTexture("Sampler0", texture)
+                    .useOverlay()
+                    .sortOnUpload()
+                    .createRenderSetup()));
+    public static final List<LabelInteractEvents.DelayedEvent> CLIENT_UPDATE = new ArrayList<>();
+
+    public static void registerRenderPipelines(RegisterRenderPipelinesEvent event) {
+        event.registerPipeline(LABEL_NO_DEPTH_PIPELINE);
+    }
+
     @SubscribeEvent
-    public void blockOverlayEvent(RenderHighlightEvent.Block event) {
-        var distance = Minecraft.getInstance().player.getAttribute(Attributes.BLOCK_INTERACTION_RANGE).getValue();
-        var isHoldingAccessor = Minecraft.getInstance().player.getItemInHand(InteractionHand.MAIN_HAND).is(TransferLabels.LABEL_ACCESSOR.get());
-        var isHoldingLabel = Minecraft.getInstance().player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof TransferLabelItem || isHoldingAccessor;
-        if (isHoldingLabel){
-            var nearbyLabels = LabelClientStorage.getNearbyLabels(Minecraft.getInstance().level, event.getTarget().getBlockPos(), (int) (distance*distance));
-            var pair = RayTraceUtils.rayTraceVoxelShape(nearbyLabels, Minecraft.getInstance().level, Minecraft.getInstance().player,  0, isHoldingAccessor ? null : event.getTarget().getBlockPos());
-            if (pair != null) {
-                event.setCanceled(true);
+    public void blockOverlayEvent(ExtractBlockOutlineRenderStateEvent event) {
+        var player = Minecraft.getInstance().player;
+        if (player == null) return;
+        var distance = player.getAttribute(Attributes.BLOCK_INTERACTION_RANGE).getValue();
+        var isHoldingAccessor = player.getItemInHand(InteractionHand.MAIN_HAND).is(TransferLabels.LABEL_ACCESSOR.get());
+        var isHoldingLabel = player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof TransferLabelItem || isHoldingAccessor;
+        if (!isHoldingLabel) return;
+        var nearbyLabels = LabelClientStorage.getNearbyLabels(event.getLevel(), event.getBlockPos(), (int) (distance * distance));
+        var pair = RayTraceUtils.rayTraceVoxelShape(nearbyLabels, event.getLevel(), player, 0, isHoldingAccessor ? null : event.getBlockPos());
+        if (pair == null) return;
+        var box = pair.getFirst().collectShapes(pair.getSecond());
+        if (box == null) return;
+        var shape = Shapes.create(box);
+        var cameraPos = event.getCamera().position();
+        BlockOutlineRenderState state = event.getLevelRenderState().blockOutlineRenderState;
+        int outlineColor = state != null && state.highContrast() ? -11010079 : ARGB.black(102);
+        event.addCustomRenderer((renderState, buffer, stack, translucentPass, levelRenderState) -> {
+            ShapeRenderer.renderShape(stack, buffer.getBuffer(RenderTypes.lines()), shape, -cameraPos.x, -cameraPos.y, -cameraPos.z, outlineColor, Minecraft.getInstance().gameRenderer.getGameRenderState().windowRenderState.appropriateLineWidth);
+            return true;
+        });
+    }
 
-                double x = 0;
-                double y = 0;
-                double z = 0;
-
-                // Calculate position relative to the camera
-                Vec3 cameraPos = event.getCamera().getPosition();
-                double renderX = x - cameraPos.x;
-                double renderY = y - cameraPos.y;
-                double renderZ = z - cameraPos.z;
-
-                // Push the current matrix stack
-                var poseStack = event.getPoseStack();
-                poseStack.pushPose();
-                poseStack.translate(renderX, renderY, renderZ);
-                LevelRenderer.renderLineBox(event.getPoseStack(), Minecraft.getInstance().renderBuffers().outlineBufferSource().getBuffer(RenderType.lines()), pair.getFirst().collectShapes(pair.getSecond()), 0, 0, 0, 0.35F);
-
-
-                // Restore the previous matrix stack
-                poseStack.popPose();
-
-
+    @SubscribeEvent
+    public void extractLabels(ExtractLevelRenderStateEvent event) {
+        var player = Minecraft.getInstance().player;
+        if (player == null) {
+            event.getRenderState().setRenderData(LABEL_RENDER_DATA, List.of());
+            return;
+        }
+        var isHoldingAccessor = player.getItemInHand(InteractionHand.MAIN_HAND).is(TransferLabels.LABEL_ACCESSOR.get());
+        var isHoldingLabel = player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof TransferLabelItem || isHoldingAccessor;
+        var renderWithoutDepth = isHoldingLabel && player.isShiftKeyDown();
+        var cameraPos = event.getCamera().position();
+        List<LabelRenderData> renderData = new ArrayList<>();
+        for (var label : LabelClientStorage.getNearbyLabels(event.getLevel(), player.blockPosition(), 20 * 20)) {
+            for (var entry : label.getLabels().entrySet()) {
+                renderData.add(new LabelRenderData(
+                        label.getPos().getX() - cameraPos.x,
+                        label.getPos().getY() - cameraPos.y,
+                        label.getPos().getZ() - cameraPos.z,
+                        entry.getKey(),
+                        getTexture(entry.getValue().getLabel()),
+                        isHoldingLabel ? 255 : 100,
+                        renderWithoutDepth));
             }
         }
-    }
-
-    public static RenderType createRenderType() {
-        RenderType.CompositeState state = RenderType.CompositeState.builder()
-                .setShaderState(new RenderStateShard.ShaderStateShard(GameRenderer::getPositionTexColorShader))
-                .setTextureState(new RenderStateShard.TextureStateShard(ResourceLocation.fromNamespaceAndPath("minecraft", "textures/block/dirt.png"), false, false))
-                .setTransparencyState(new RenderStateShard.TransparencyStateShard("translucent_transparency", () -> {
-
-                }, () -> {
-
-                })).createCompositeState(true);
-        return RenderType.create("mycelial_render", DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS, 262144, false, true, state);
+        event.getRenderState().setRenderData(LABEL_RENDER_DATA, List.copyOf(renderData));
     }
 
     @SubscribeEvent
-    public void onRender(RenderLevelStageEvent event){
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES) return;
-        var currentPos = Minecraft.getInstance().player.blockPosition();
-        var isHoldingAccessor = Minecraft.getInstance().player.getItemInHand(InteractionHand.MAIN_HAND).is(TransferLabels.LABEL_ACCESSOR.get());
-        var isHoldingLabel = Minecraft.getInstance().player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof TransferLabelItem || isHoldingAccessor;
-        var transparentAlpha = 100;
-        var nearbyLabels = LabelClientStorage.getNearbyLabels(Minecraft.getInstance().level, currentPos, 20*20);
+    public void submitLabels(SubmitCustomGeometryEvent event) {
+        var renderData = event.getLevelRenderState().getRenderData(LABEL_RENDER_DATA);
+        if (renderData == null) return;
         var poseStack = event.getPoseStack();
-        var combinedLight = LightTexture.FULL_BRIGHT;
-        var combinedOverlay = OverlayTexture.NO_OVERLAY;
-        if ((isHoldingLabel && Minecraft.getInstance().player.isCrouching()) || isHoldingAccessor){
-            RenderSystem.disableDepthTest();
-        } else {
-            RenderSystem.enableDepthTest();
-        }
-        for (var label : nearbyLabels) {
-            // Coordinates where the texture will be rendered
-            double x = label.getPos().getX();
-            double y = label.getPos().getY();
-            double z = label.getPos().getZ();
-
-            // Calculate position relative to the camera
-            Vec3 cameraPos = event.getCamera().getPosition();
-            double renderX = x - cameraPos.x;
-            double renderY = y - cameraPos.y;
-            double renderZ = z - cameraPos.z;
-
-            // Push the current matrix stack
+        var collector = event.getSubmitNodeCollector();
+        for (var label : renderData) {
             poseStack.pushPose();
-            poseStack.translate(renderX, renderY, renderZ);
-
-            // Bind the texture you want to render
-
-            RenderSystem.setShader(GameRenderer::getPositionColorTexLightmapShader);
-
-            RenderSystem.enableBlend();
-
-            //RenderSystem.defaultBlendFunc();
-            ////ENABLE TO SEE THROUGH
-
-            // Obtain the Tesselator and BufferBuilder
-
-
-            // Define the size of the texture quad
-            float size = 1.0f;
-
-            // Start drawing the quad
-            //buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-            if (label.getLabels().containsKey(Direction.NORTH)) {
-                Tesselator tesselator = Tesselator.getInstance();
-                BufferBuilder buffer = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP);
-                RenderSystem.setShaderTexture(0, getTexture(label.getLabels().get(Direction.NORTH).getLabel()));
-                buffer.addVertex(poseStack.last().pose(), 0, 0, -0.001f).setUv(1, 1).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), 0, size, -0.001f).setUv(1, 0).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), size, size, -0.001f).setUv(0, 0).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), size, 0, -0.001f).setUv(0, 1).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                var mesh = buffer.build();
-                if (mesh != null) {
-                    BufferUploader.drawWithShader(mesh);
-                }
-                tesselator.clear();
-            }
-
-            if (label.getLabels().containsKey(Direction.SOUTH)) {
-                Tesselator tesselator = Tesselator.getInstance();
-                BufferBuilder buffer = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP);
-                RenderSystem.setShaderTexture(0, getTexture(label.getLabels().get(Direction.SOUTH).getLabel()));
-                buffer.addVertex(poseStack.last().pose(), size, 0, 1.001f).setUv(1, 1).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), size, size, 1.001f).setUv(1, 0).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), 0, size, 1.001f).setUv(0, 0).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), 0, 0, 1.001f).setUv(0, 1).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                var mesh = buffer.build();
-                if (mesh != null) {
-                    BufferUploader.drawWithShader(mesh);
-                }
-                tesselator.clear();
-            }
-
-            if (label.getLabels().containsKey(Direction.WEST)) {
-                Tesselator tesselator = Tesselator.getInstance();
-                BufferBuilder buffer = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP);
-                RenderSystem.setShaderTexture(0, getTexture(label.getLabels().get(Direction.WEST).getLabel()));
-                buffer.addVertex(poseStack.last().pose(), -0.001f, 0, size).setUv(1, 1).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), -0.001f, size, size).setUv(1, 0).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), -0.001f, size, 0).setUv(0, 0).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), -0.001f, 0, 0).setUv(0, 1).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                var mesh = buffer.build();
-                if (mesh != null) {
-                    BufferUploader.drawWithShader(mesh);
-                }
-                tesselator.clear();
-            }
-
-            if (label.getLabels().containsKey(Direction.EAST)) {
-                Tesselator tesselator = Tesselator.getInstance();
-                BufferBuilder buffer = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP);
-                RenderSystem.setShaderTexture(0, getTexture(label.getLabels().get(Direction.EAST).getLabel()));
-                buffer.addVertex(poseStack.last().pose(), 1.001f, 0, 0).setUv(1, 1).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), 1.001f, size, 0).setUv(1, 0).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), 1.001f, size, size).setUv(0, 0).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), 1.001f, 0, size).setUv(0, 1).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                var mesh = buffer.build();
-                if (mesh != null) {
-                    BufferUploader.drawWithShader(mesh);
-                }
-                tesselator.clear();
-            }
-
-            if (label.getLabels().containsKey(Direction.UP)) {
-                Tesselator tesselator = Tesselator.getInstance();
-                BufferBuilder buffer = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP);
-                RenderSystem.setShaderTexture(0, getTexture(label.getLabels().get(Direction.UP).getLabel()));
-                buffer.addVertex(poseStack.last().pose(), 0, 1.001f, 0).setUv(0, 0).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), 0, 1.001f, size).setUv(0, 1).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), size, 1.001f, size).setUv(1, 1).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), size, 1.001f, 0).setUv(1, 0).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                var mesh = buffer.build();
-                if (mesh != null) {
-                    BufferUploader.drawWithShader(mesh);
-                }
-                tesselator.clear();
-            }
-
-            if (label.getLabels().containsKey(Direction.DOWN)) {
-                Tesselator tesselator = Tesselator.getInstance();
-                BufferBuilder buffer = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR_TEX_LIGHTMAP);
-                RenderSystem.setShaderTexture(0, getTexture(label.getLabels().get(Direction.DOWN).getLabel()));
-                buffer.addVertex(poseStack.last().pose(), 0, -0.001f, size).setUv(0, 0).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), 0, -0.001f, 0).setUv(0, 1).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), size, -0.001f, 0).setUv(1, 1).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                buffer.addVertex(poseStack.last().pose(), size, -0.001f, size).setUv(1, 0).setLight(0xF000F0).setColor(255, 255, 255, isHoldingLabel ? 255 : transparentAlpha);
-                var mesh = buffer.build();
-                if (mesh != null) {
-                    BufferUploader.drawWithShader(mesh);
-                }
-                tesselator.clear();
-            }
-
-
-            // Restore the previous matrix stack
+            poseStack.translate(label.x(), label.y(), label.z());
+            var renderType = label.renderWithoutDepth() ? LABEL_NO_DEPTH_RENDER_TYPE.apply(label.texture()) : RenderTypes.entityTranslucentEmissive(label.texture());
+            collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> renderLabel(pose, buffer, label.direction(), label.alpha()));
             poseStack.popPose();
         }
-        RenderSystem.enableDepthTest();
     }
 
-    public static ResourceLocation getTexture(ItemStack stack) {
-        if (stack.getItem() instanceof TransferLabelItem) {
-            return ((TransferLabelItem) stack.getItem()).getTexture();
+    private static void renderLabel(PoseStack.Pose pose, VertexConsumer buffer, Direction direction, int alpha) {
+        switch (direction) {
+            case NORTH -> quad(pose, buffer, alpha, 0, 0, -0.001f, 0, 1, -0.001f, 1, 1, -0.001f, 1, 0, -0.001f, 0, 0, -1);
+            case SOUTH -> quad(pose, buffer, alpha, 1, 0, 1.001f, 1, 1, 1.001f, 0, 1, 1.001f, 0, 0, 1.001f, 0, 0, 1);
+            case WEST -> quad(pose, buffer, alpha, -0.001f, 0, 1, -0.001f, 1, 1, -0.001f, 1, 0, -0.001f, 0, 0, -1, 0, 0);
+            case EAST -> quad(pose, buffer, alpha, 1.001f, 0, 0, 1.001f, 1, 0, 1.001f, 1, 1, 1.001f, 0, 1, 1, 0, 0);
+            case UP -> quad(pose, buffer, alpha, 0, 1.001f, 0, 0, 1.001f, 1, 1, 1.001f, 1, 1, 1.001f, 0, 0, 1, 0);
+            case DOWN -> quad(pose, buffer, alpha, 0, -0.001f, 1, 0, -0.001f, 0, 1, -0.001f, 0, 1, -0.001f, 1, 0, -1, 0);
         }
-        return ResourceLocation.fromNamespaceAndPath(TransferLabels.MODID, "textures/item/itemstack_insert_transfer_label.png");
     }
 
-    public static List<LabelInteractEvents.DelayedEvent> CLIENT_UPDATE = new ArrayList<>();
+    private static void quad(PoseStack.Pose pose, VertexConsumer buffer, int alpha,
+                             float x1, float y1, float z1, float x2, float y2, float z2,
+                             float x3, float y3, float z3, float x4, float y4, float z4,
+                             float normalX, float normalY, float normalZ) {
+        vertex(pose, buffer, x1, y1, z1, 1, 1, alpha, normalX, normalY, normalZ);
+        vertex(pose, buffer, x2, y2, z2, 1, 0, alpha, normalX, normalY, normalZ);
+        vertex(pose, buffer, x3, y3, z3, 0, 0, alpha, normalX, normalY, normalZ);
+        vertex(pose, buffer, x4, y4, z4, 0, 1, alpha, normalX, normalY, normalZ);
+    }
+
+    private static void vertex(PoseStack.Pose pose, VertexConsumer buffer, float x, float y, float z, float u, float v, int alpha, float normalX, float normalY, float normalZ) {
+        buffer.addVertex(pose, x, y, z)
+                .setColor(255, 255, 255, alpha)
+                .setUv(u, v)
+                .setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(LightCoordsUtil.FULL_BRIGHT)
+                .setNormal(normalX, normalY, normalZ);
+    }
+
+    public static Identifier getTexture(ItemStack stack) {
+        if (stack.getItem() instanceof TransferLabelItem transferLabelItem) return transferLabelItem.getTexture();
+        return Identifier.fromNamespaceAndPath(TransferLabels.MODID, "textures/item/itemstack_insert_transfer_label.png");
+    }
 
     @SubscribeEvent
     public void onTick(LevelTickEvent.Post event) {
         var delay = 2;
         if (event.getLevel() instanceof ClientLevel clientLevel) {
             CLIENT_UPDATE.forEach(leftClickBlock -> {
-                if (clientLevel.getGameTime() > (leftClickBlock.time() + delay) && leftClickBlock.event().getLevel().equals(event.getLevel())) leftClickBlock.event().getLevel().destroyBlockProgress(leftClickBlock.event().getEntity().getId(), leftClickBlock.event().getPos(), -1);
+                if (clientLevel.getGameTime() > leftClickBlock.time() + delay && leftClickBlock.event().getLevel().equals(event.getLevel())) leftClickBlock.event().getLevel().destroyBlockProgress(leftClickBlock.event().getEntity().getId(), leftClickBlock.event().getPos(), -1);
             });
-            CLIENT_UPDATE.removeIf(leftClickBlock -> clientLevel.getGameTime() > (leftClickBlock.time() + delay) && leftClickBlock.event().getLevel().equals(event.getLevel()));
+            CLIENT_UPDATE.removeIf(leftClickBlock -> clientLevel.getGameTime() > leftClickBlock.time() + delay && leftClickBlock.event().getLevel().equals(event.getLevel()));
         }
     }
 
     @SubscribeEvent
     public void onRightClick(PlayerInteractEvent.RightClickBlock event) {
-        var validInteraction =  event.getItemStack().getItem() instanceof TransferLabelItem || event.getItemStack().is(TransferLabels.LABEL_ACCESSOR);
+        var validInteraction = event.getItemStack().getItem() instanceof TransferLabelItem || event.getItemStack().is(TransferLabels.LABEL_ACCESSOR);
         if (event.getLevel() instanceof ClientLevel clientLevel && validInteraction) {
             var nearbyLabels = LabelClientStorage.getNearbyLabels(clientLevel, event.getPos(), 20);
-            var pair = RayTraceUtils.rayTraceVoxelShape(nearbyLabels, clientLevel, event.getEntity(),  0, event.getItemStack().is(TransferLabels.LABEL_ACCESSOR) ? null : event.getPos());
+            var pair = RayTraceUtils.rayTraceVoxelShape(nearbyLabels, clientLevel, event.getEntity(), 0, event.getItemStack().is(TransferLabels.LABEL_ACCESSOR) ? null : event.getPos());
             if (pair != null) {
                 event.setCanceled(true);
                 event.setCancellationResult(InteractionResult.SUCCESS);
@@ -264,20 +191,19 @@ public class LabelClientEvents {
         }
     }
 
-
     @SubscribeEvent
     public void onLeftClick(PlayerInteractEvent.LeftClickBlock event) {
-        if (event.getItemStack().getItem() instanceof TransferLabelItem && event.getAction() == PlayerInteractEvent.LeftClickBlock.Action.START){
-             if (event.getLevel() instanceof ClientLevel clientLevel) {
-                var distance = event.getEntity().getAttribute(Attributes.BLOCK_INTERACTION_RANGE).getValue();
-                var nearbyLabels = LabelClientStorage.getNearbyLabels(clientLevel, event.getPos(), (int) (distance*distance));
-                var pair = RayTraceUtils.rayTraceVoxelShape(nearbyLabels, clientLevel, event.getEntity(),  0, event.getPos());
-                if (pair != null) {
-                    event.setCanceled(true);
-                    CLIENT_UPDATE.add(new LabelInteractEvents.DelayedEvent(event, clientLevel.getGameTime()));
-                }
+        if (event.getItemStack().getItem() instanceof TransferLabelItem && event.getAction() == PlayerInteractEvent.LeftClickBlock.Action.START && event.getLevel() instanceof ClientLevel clientLevel) {
+            var distance = event.getEntity().getAttribute(Attributes.BLOCK_INTERACTION_RANGE).getValue();
+            var nearbyLabels = LabelClientStorage.getNearbyLabels(clientLevel, event.getPos(), (int) (distance * distance));
+            var pair = RayTraceUtils.rayTraceVoxelShape(nearbyLabels, clientLevel, event.getEntity(), 0, event.getPos());
+            if (pair != null) {
+                event.setCanceled(true);
+                CLIENT_UPDATE.add(new LabelInteractEvents.DelayedEvent(event, clientLevel.getGameTime()));
             }
         }
     }
 
+    private record LabelRenderData(double x, double y, double z, Direction direction, Identifier texture, int alpha, boolean renderWithoutDepth) {
+    }
 }

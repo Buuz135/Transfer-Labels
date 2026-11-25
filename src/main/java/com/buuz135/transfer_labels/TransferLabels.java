@@ -12,8 +12,8 @@ import com.buuz135.transfer_labels.packet.LabelSyncPacket;
 import com.buuz135.transfer_labels.packet.SingleLabelSyncPacket;
 import com.buuz135.transfer_labels.screen.LabelAddonScreen;
 import com.buuz135.transfer_labels.storage.LabelLocatorInstance;
-import com.hrznstudio.titanium.event.handler.EventManager;
 import com.hrznstudio.titanium.module.ModuleController;
+import com.hrznstudio.titanium.module.DeferredRegistryHelper;
 import com.hrznstudio.titanium.network.CompoundSerializableDataHandler;
 import com.hrznstudio.titanium.network.NetworkHandler;
 import com.hrznstudio.titanium.network.locator.LocatorFactory;
@@ -22,7 +22,7 @@ import com.mojang.logging.LogUtils;
 
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -34,6 +34,7 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.data.event.GatherDataEvent;
+import net.minecraft.server.packs.PackType;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import org.slf4j.Logger;
 
@@ -44,7 +45,7 @@ public class TransferLabels extends ModuleController {
     public static final String MODID = "transfer_labels";
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static TitaniumTab TAB = new TitaniumTab(ResourceLocation.fromNamespaceAndPath(MODID, "main"));
+    public static TitaniumTab TAB = new TitaniumTab(Identifier.fromNamespaceAndPath(MODID, "main"));
     public static NetworkHandler NETWORK = new NetworkHandler(MODID);
 
     static {
@@ -64,13 +65,12 @@ public class TransferLabels extends ModuleController {
 
         if (dist.isClient()) {
             NeoForge.EVENT_BUS.register(new LabelClientEvents());
+            modEventBus.addListener(LabelClientEvents::registerRenderPipelines);
             modEventBus.addListener((final RegisterMenuScreensEvent event) -> {
                 event.register((MenuType<? extends TransferLabelBasicAddonContainer>) TransferLabelBasicAddonContainer.LABEL_TYPE.get(), LabelAddonScreen::new);
             });
         }
         NeoForge.EVENT_BUS.register(new LabelInteractEvents());
-
-        EventManager.mod(GatherDataEvent.class).process(this::dataGen).subscribe();
 
         CompoundSerializableDataHandler.map(Direction.class, Direction.STREAM_CODEC);
     }
@@ -84,7 +84,7 @@ public class TransferLabels extends ModuleController {
         FLUIDSTACK_INSERT_LABEL = getRegistries().registerGeneric(Registries.ITEM, "fluidstack_insert_transfer_label", () ->  new FluidStackTransferLabelItem(TransferLabelItem.Mode.INSERT));
         FLUIDSTACK_EXTRACT_LABEL = getRegistries().registerGeneric(Registries.ITEM, "fluidstack_extract_transfer_label", () ->  new FluidStackTransferLabelItem(TransferLabelItem.Mode.EXTRACT));
         LABEL_ACCESSOR = getRegistries().registerGeneric(Registries.ITEM, "label_accessor", () -> {
-            var item = new Item(new Item.Properties().stacksTo(1));
+            var item = new Item(DeferredRegistryHelper.applyItemRegistrationId(new Item.Properties()).stacksTo(1));
             TAB.getTabList().add(item);
             return item;
         });
@@ -92,9 +92,14 @@ public class TransferLabels extends ModuleController {
         TransferLabelBasicAddonContainer.LABEL_TYPE = getRegistries().registerGeneric(Registries.MENU, "label_addon_container", () -> (MenuType) IMenuTypeExtension.create(TransferLabelBasicAddonContainer::create));
     }
 
-    public void dataGen(GatherDataEvent event) {
-        event.getGenerator().addProvider(true, new TransferLabelLangItemProvider(event.getGenerator(), MODID, "en_us"));
-        event.getGenerator().addProvider(true, new TransferLabelItemModelProvider(event.getGenerator(), MODID, event.getExistingFileHelper()));
-        event.getGenerator().addProvider(true, new TransferLabelRecipesProvider(event.getGenerator(), event.getLookupProvider()));
+    @Override
+    public void addDataProvider(GatherDataEvent event) {
+        if (event instanceof GatherDataEvent.Client) {
+            event.addProvider(new TransferLabelLangItemProvider(event.getGenerator(), MODID, "en_us"));
+            event.addProvider(new TransferLabelItemModelProvider(event.getGenerator(), MODID));
+        }
+        if (event instanceof GatherDataEvent.Server) {
+            event.addProvider(new TransferLabelRecipesProvider.Runner(event.getGenerator().getPackOutput(), event.getLookupProvider(), event.getResourceManager(PackType.SERVER_DATA)));
+        }
     }
 }

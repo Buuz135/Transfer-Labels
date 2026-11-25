@@ -12,7 +12,7 @@ import com.hrznstudio.titanium.network.locator.ILocatable;
 import com.hrznstudio.titanium.network.messages.ButtonClickNetworkMessage;
 import com.hrznstudio.titanium.util.AssetUtil;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -52,7 +52,7 @@ public class ScrollableScreenAddon extends BasicScreenAddon {
     }
 
     @Override
-    public void drawBackgroundLayer(GuiGraphics guiGraphics, Screen screen, IAssetProvider iAssetProvider, int guiX, int guiY, int mouseX, int mouseY, float partialTicks) {
+    public void drawBackgroundLayer(GuiGraphicsExtractor guiGraphics, Screen screen, IAssetProvider iAssetProvider, int guiX, int guiY, int mouseX, int mouseY, float partialTicks) {
         if (assetType != null) {
             IAsset asset = iAssetProvider.getAsset(assetType.get());
             area = asset.getArea();
@@ -63,10 +63,10 @@ public class ScrollableScreenAddon extends BasicScreenAddon {
     }
 
     @Override
-    public void drawForegroundLayer(GuiGraphics guiGraphics, Screen screen, IAssetProvider iAssetProvider,  int guiX, int guiY, int mouseX, int mouseY, float partialTicks) {
+    public void drawForegroundLayer(GuiGraphicsExtractor guiGraphics, Screen screen, IAssetProvider iAssetProvider,  int guiX, int guiY, int mouseX, int mouseY, float partialTicks) {
         if (this.isMouseOver(mouseX, mouseY)) {
             AssetUtil.drawSelectingOverlay(guiGraphics, this.getPosX() + 2, this.getPosY() + 2, this.getPosX() + this.getXSize() - 2, this.getPosY() + this.getYSize() - 3);
-            guiGraphics.renderComponentTooltip(Minecraft.getInstance().font, getTooltipLines(), mouseX - guiX, mouseY - guiY);
+            guiGraphics.setComponentTooltipForNextFrame(Minecraft.getInstance().font, getTooltipLines(), mouseX, mouseY);
         }
     }
 

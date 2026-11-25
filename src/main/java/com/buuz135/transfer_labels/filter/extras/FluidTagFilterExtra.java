@@ -3,12 +3,12 @@ package com.buuz135.transfer_labels.filter.extras;
 import com.hrznstudio.titanium.util.TagUtil;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
-import net.neoforged.neoforge.common.util.INBTSerializable;
+import com.hrznstudio.titanium.nbthandler.INBTSerializable;
 import net.neoforged.neoforge.fluids.FluidStack;
 
 import java.util.ArrayList;
@@ -28,7 +28,7 @@ public class FluidTagFilterExtra implements INBTSerializable<CompoundTag> {
     }
 
     public void initTag(int slot, FluidStack item){
-        var tags = item.getTags().toList();
+        var tags = item.typeHolder().tags().toList();
         if (tags.isEmpty()){
             this.extra.set(slot, null);
         } else {
@@ -37,7 +37,7 @@ public class FluidTagFilterExtra implements INBTSerializable<CompoundTag> {
     }
 
     public void nextTag(int slot, FluidStack item){
-        var tags = item.getTags().toList();
+        var tags = item.typeHolder().tags().toList();
         if (tags.isEmpty()){
             this.extra.set(slot, null);
             return;
@@ -67,7 +67,7 @@ public class FluidTagFilterExtra implements INBTSerializable<CompoundTag> {
     }
 
     public void previousTag(int slot, FluidStack item){
-        var tags = item.getTags().toList();
+        var tags = item.typeHolder().tags().toList();
         if (tags.isEmpty()){
             this.extra.set(slot, null);
             return;
@@ -113,7 +113,7 @@ public class FluidTagFilterExtra implements INBTSerializable<CompoundTag> {
     public void deserializeNBT(HolderLookup.Provider provider, CompoundTag compoundTag) {
         for (int i = 0; i < this.extra.size(); i++) {
             if (compoundTag.contains(i + "")) {
-                this.extra.set(i, TagUtil.getFluidTag(ResourceLocation.parse(compoundTag.getString(i + ""))));
+                this.extra.set(i, TagUtil.getFluidTag(Identifier.parse(compoundTag.getStringOr(i + "", ""))));
             } else {
                 this.extra.set(i, null);
             }

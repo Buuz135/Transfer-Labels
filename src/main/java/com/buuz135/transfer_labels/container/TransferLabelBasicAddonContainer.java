@@ -29,7 +29,7 @@ public class TransferLabelBasicAddonContainer extends BasicAddonContainer {
         LocatorInstance instance = LocatorFactory.readPacketBuffer(packetBuffer);
         if (instance != null) {
             Player playerEntity = inventory.player;
-            Level world = playerEntity.getCommandSenderWorld();
+            Level world = playerEntity.level();
             TransferLabelBasicAddonContainer container = instance.locale(playerEntity).map((located) -> new TransferLabelBasicAddonContainer(located, instance, instance.getWorldPosCallable(world), inventory, id)).orElse(null);
             if (container != null) {
                 return container;

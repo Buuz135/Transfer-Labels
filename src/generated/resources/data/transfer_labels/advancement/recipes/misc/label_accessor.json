@@ -1,8 +1,8 @@
 {
   "neoforge:conditions": [
     {
-      "type": "neoforge:item_exists",
-      "item": "transfer_labels:label_accessor"
+      "type": "neoforge:registered",
+      "value": "transfer_labels:label_accessor"
     }
   ],
   "parent": "minecraft:recipes/root",

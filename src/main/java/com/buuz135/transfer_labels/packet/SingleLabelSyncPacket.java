@@ -7,9 +7,6 @@ import com.hrznstudio.titanium.network.Message;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public class SingleLabelSyncPacket extends Message {
@@ -26,12 +23,15 @@ public class SingleLabelSyncPacket extends Message {
     public SingleLabelSyncPacket() {
     }
 
-    @OnlyIn(Dist.CLIENT)
     @Override
-    protected void handleMessage(IPayloadContext context) {
+    public void handleClientMessage(IPayloadContext context) {
         context.enqueueWork(() -> {
             LabelClientStorage.getStorage(Minecraft.getInstance().level)
                     .getLabelBlocksMap().computeIfAbsent(pos, blockPos -> new LabelBlock(blockPos, Minecraft.getInstance().level)).deserializeNBT(Minecraft.getInstance().level.registryAccess(), label);
         });
+    }
+
+    @Override
+    protected void handleServerMessage(IPayloadContext context) {
     }
 }

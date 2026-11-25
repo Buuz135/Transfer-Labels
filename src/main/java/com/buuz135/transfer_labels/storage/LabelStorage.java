@@ -4,11 +4,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedDataType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,12 +20,15 @@ import java.util.stream.Collectors;
 public class LabelStorage extends SavedData {
 
     public static final String DATA_NAME = "TRANSFER_LABELS_LABEL_STORAGE";
+    public static final SavedDataType<LabelStorage> TYPE = new SavedDataType<>(
+            Identifier.fromNamespaceAndPath("transfer_labels", "labels"),
+            LabelStorage::new,
+            level -> CompoundTag.CODEC.xmap(
+                    tag -> createFromCompound(level, tag, level.registryAccess()),
+                    storage -> storage.save(new CompoundTag(), level.registryAccess())));
 
     public static LabelStorage getStorageFor(ServerLevel level) {
-        return level.getDataStorage().computeIfAbsent(new Factory<LabelStorage>(
-                () -> new LabelStorage(level),
-                (compoundTag, provider) -> createFromCompound(level, compoundTag, provider)
-        ), DATA_NAME);
+        return level.getDataStorage().computeIfAbsent(TYPE);
     }
 
     private static LabelStorage createFromCompound(Level level, CompoundTag compoundTag, HolderLookup.Provider provider) {
@@ -81,14 +86,14 @@ public class LabelStorage extends SavedData {
     public void loadNearby(BlockPos anchor, int distance, CompoundTag compoundTag, HolderLookup.Provider provider){
         var nearby = getLabelBlocks().stream().filter(labelBlock -> labelBlock.getPos().distSqr(anchor) <= distance).toList();
         List<BlockPos> visitedPositions = new ArrayList<>();
-        compoundTag.getAllKeys().forEach(s -> {
+        compoundTag.keySet().forEach(s -> {
            var pos = BlockPos.of(Long.parseLong(s));
             visitedPositions.add(pos);
            if (labelBlocks.containsKey(pos)) {
-               labelBlocks.get(pos).deserializeNBT(provider, compoundTag.getCompound(s));
+               labelBlocks.get(pos).deserializeNBT(provider, compoundTag.getCompoundOrEmpty(s));
            } else {
                var label = new LabelBlock(pos, level);
-               label.deserializeNBT(provider, compoundTag.getCompound(s));
+               label.deserializeNBT(provider, compoundTag.getCompoundOrEmpty(s));
                labelBlocks.put(pos, label);
            }
         });
@@ -99,7 +104,6 @@ public class LabelStorage extends SavedData {
         });
     }
 
-    @Override
     public CompoundTag save(CompoundTag compoundTag, HolderLookup.Provider provider) {
         CompoundTag labels = new CompoundTag();
         labelBlocks.forEach((pos, labelBlock) -> labels.put(pos.asLong() + "", labelBlock.serializeNBT(provider)));
@@ -109,16 +113,16 @@ public class LabelStorage extends SavedData {
 
     public void load(CompoundTag compoundTag, HolderLookup.Provider provider) {
         //labelBlocks = new HashMap<>();
-        CompoundTag labels = compoundTag.getCompound("Labels");
+        CompoundTag labels = compoundTag.getCompoundOrEmpty("Labels");
         List<BlockPos> visitedPositions = new ArrayList<>();
-        labels.getAllKeys().forEach(s -> {
+        labels.keySet().forEach(s -> {
             var pos = BlockPos.of(Long.parseLong(s));
             visitedPositions.add(pos);
             if (this.labelBlocks.containsKey(pos)){
-                this.labelBlocks.get(pos).deserializeNBT(provider, labels.getCompound(s));
+                this.labelBlocks.get(pos).deserializeNBT(provider, labels.getCompoundOrEmpty(s));
             } else {
                 var label = new LabelBlock(pos, level);
-                label.deserializeNBT(provider, labels.getCompound(s));
+                label.deserializeNBT(provider, labels.getCompoundOrEmpty(s));
                 labelBlocks.put(pos, label);
             }
         });

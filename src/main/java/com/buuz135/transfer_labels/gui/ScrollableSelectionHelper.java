@@ -8,8 +8,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.nbt.CompoundTag;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,7 +37,6 @@ public class ScrollableSelectionHelper {
         return formattedOptions;
     }
 
-    @OnlyIn(Dist.CLIENT)
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY, ILocatable locatable) {
         CompoundTag compoundNBT = new CompoundTag();
         compoundNBT.putString("Scrollable_Name", name);

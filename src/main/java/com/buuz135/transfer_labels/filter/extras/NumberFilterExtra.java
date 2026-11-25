@@ -2,7 +2,7 @@ package com.buuz135.transfer_labels.filter.extras;
 
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.neoforged.neoforge.common.util.INBTSerializable;
+import com.hrznstudio.titanium.nbthandler.INBTSerializable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,10 +39,10 @@ public class NumberFilterExtra implements INBTSerializable<CompoundTag> {
 
     @Override
     public void deserializeNBT(HolderLookup.Provider provider, CompoundTag compoundTag) {
-        compoundTag.getAllKeys().forEach(s -> {
+        compoundTag.keySet().forEach(s -> {
             int slot = Integer.parseInt(s);
             if (slot >= 0 && slot < this.extra.size()) {
-                this.extra.set(slot, compoundTag.getInt(s));
+                this.extra.set(slot, compoundTag.getIntOr(s, 0));
             }
         });
     }

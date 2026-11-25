@@ -1,37 +1,33 @@
 package com.buuz135.transfer_labels.data;
 
 import com.buuz135.transfer_labels.TransferLabels;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.client.data.models.BlockModelGenerators;
+import net.minecraft.client.data.models.ItemModelGenerators;
+import net.minecraft.client.data.models.ModelProvider;
+import net.minecraft.client.data.models.model.ModelTemplates;
+import net.minecraft.core.Holder;
 import net.minecraft.data.DataGenerator;
-import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.Item;
-import net.neoforged.neoforge.client.model.generators.ItemModelProvider;
-import net.neoforged.neoforge.client.model.generators.ModelFile;
-import net.neoforged.neoforge.common.data.ExistingFileHelper;
-import net.neoforged.neoforge.registries.DeferredHolder;
+import net.minecraft.world.level.block.Block;
 
-import java.util.Arrays;
-import java.util.List;
+import java.util.stream.Stream;
 
-public class TransferLabelItemModelProvider extends ItemModelProvider {
+public class TransferLabelItemModelProvider extends ModelProvider {
 
-
-    public TransferLabelItemModelProvider(DataGenerator generator, String modid, ExistingFileHelper existingFileHelper) {
-        super(generator.getPackOutput(), modid, existingFileHelper);
+    public TransferLabelItemModelProvider(DataGenerator generator, String modId) {
+        super(generator.getPackOutput(), modId);
     }
 
     @Override
-    protected void registerModels() {
-        generateItem(TransferLabels.ITEMSTACK_INSERT_LABEL.get());
-        generateItem(TransferLabels.ITEMSTACK_EXTRACT_LABEL.get());
-        generateItem(TransferLabels.FLUIDSTACK_INSERT_LABEL.get());
-        generateItem(TransferLabels.FLUIDSTACK_EXTRACT_LABEL.get());
-        generateItem(TransferLabels.LABEL_ACCESSOR.get());
+    protected void registerModels(BlockModelGenerators blockModels, ItemModelGenerators itemModels) {
+        itemModels.generateFlatItem(TransferLabels.ITEMSTACK_INSERT_LABEL.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(TransferLabels.ITEMSTACK_EXTRACT_LABEL.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(TransferLabels.FLUIDSTACK_INSERT_LABEL.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(TransferLabels.FLUIDSTACK_EXTRACT_LABEL.get(), ModelTemplates.FLAT_ITEM);
+        itemModels.generateFlatItem(TransferLabels.LABEL_ACCESSOR.get(), ModelTemplates.FLAT_ITEM);
     }
 
-    private void generateItem(Item item) {
-        getBuilder(BuiltInRegistries.ITEM.getKey(item).getPath())
-                    .parent(new ModelFile.UncheckedModelFile("item/generated"))
-                    .texture("layer0", modLoc("item/" + BuiltInRegistries.ITEM.getKey(item).getPath()));
+    @Override
+    protected Stream<? extends Holder<Block>> getKnownBlocks() {
+        return Stream.empty();
     }
 }

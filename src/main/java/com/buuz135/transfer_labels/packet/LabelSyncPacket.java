@@ -2,26 +2,15 @@ package com.buuz135.transfer_labels.packet;
 
 import com.buuz135.transfer_labels.storage.LabelStorage;
 import com.buuz135.transfer_labels.storage.client.LabelClientStorage;
-import com.hrznstudio.titanium.network.CompoundSerializableDataHandler;
 import com.hrznstudio.titanium.network.Message;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.dimension.DimensionType;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.HashMap;
 
 public class LabelSyncPacket extends Message {
-
-    static {
-        CompoundSerializableDataHandler.map(DimensionType.class,
-                registryFriendlyByteBuf -> registryFriendlyByteBuf.readJsonWithCodec(DimensionType.DIRECT_CODEC),
-                (buf, type) -> buf.writeJsonWithCodec(DimensionType.DIRECT_CODEC, type));
-    }
 
     public CompoundTag labels;
     public BlockPos anchor;
@@ -36,11 +25,14 @@ public class LabelSyncPacket extends Message {
     public LabelSyncPacket() {
     }
 
-    @OnlyIn(Dist.CLIENT)
     @Override
-    protected void handleMessage(IPayloadContext context) {
+    public void handleClientMessage(IPayloadContext context) {
         context.enqueueWork(() -> {
             LabelClientStorage.getStorage(Minecraft.getInstance().level).loadNearby(anchor, distance, this.labels, Minecraft.getInstance().level.registryAccess());
         });
+    }
+
+    @Override
+    protected void handleServerMessage(IPayloadContext context) {
     }
 }

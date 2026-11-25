@@ -1,3 +1,7 @@
+# 0.2.0
+
+* Ported to 26.1.2
+
 # 0.1.9
 
 * Added `shouldTickBlocksAt` on the tick label method, closes #10

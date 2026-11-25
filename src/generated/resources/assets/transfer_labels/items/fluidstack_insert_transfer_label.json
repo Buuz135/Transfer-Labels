@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "transfer_labels:item/fluidstack_insert_transfer_label"
+  }
+}

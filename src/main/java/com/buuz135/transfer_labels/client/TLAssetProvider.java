@@ -4,7 +4,7 @@ import com.buuz135.transfer_labels.TransferLabels;
 import com.hrznstudio.titanium.api.client.IAsset;
 import com.hrznstudio.titanium.api.client.IAssetType;
 import com.hrznstudio.titanium.client.screen.asset.IAssetProvider;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
@@ -21,8 +21,8 @@ public class TLAssetProvider implements IAssetProvider {
         }
 
         @Override
-        public ResourceLocation getResourceLocation() {
-            return ResourceLocation.fromNamespaceAndPath(TransferLabels.MODID, "textures/gui/textures.png" );
+        public Identifier getIdentifier() {
+            return Identifier.fromNamespaceAndPath(TransferLabels.MODID, "textures/gui/textures.png" );
         }
     };
     public static final IAsset FILTER_REGULATING = new IAsset() {
@@ -32,8 +32,8 @@ public class TLAssetProvider implements IAssetProvider {
         }
 
         @Override
-        public ResourceLocation getResourceLocation() {
-            return ResourceLocation.fromNamespaceAndPath(TransferLabels.MODID, "textures/gui/textures.png" );
+        public Identifier getIdentifier() {
+            return Identifier.fromNamespaceAndPath(TransferLabels.MODID, "textures/gui/textures.png" );
         }
     };
     public static final IAsset FILTER_EXACT_COUNT = new IAsset() {
@@ -43,8 +43,8 @@ public class TLAssetProvider implements IAssetProvider {
         }
 
         @Override
-        public ResourceLocation getResourceLocation() {
-            return ResourceLocation.fromNamespaceAndPath(TransferLabels.MODID, "textures/gui/textures.png" );
+        public Identifier getIdentifier() {
+            return Identifier.fromNamespaceAndPath(TransferLabels.MODID, "textures/gui/textures.png" );
         }
     };
     public static final IAsset FILTER_MOD = new IAsset() {
@@ -54,8 +54,8 @@ public class TLAssetProvider implements IAssetProvider {
         }
 
         @Override
-        public ResourceLocation getResourceLocation() {
-            return ResourceLocation.fromNamespaceAndPath(TransferLabels.MODID, "textures/gui/textures.png" );
+        public Identifier getIdentifier() {
+            return Identifier.fromNamespaceAndPath(TransferLabels.MODID, "textures/gui/textures.png" );
         }
     };
     public static final IAsset FILTER_TAG = new IAsset() {
@@ -65,8 +65,8 @@ public class TLAssetProvider implements IAssetProvider {
         }
 
         @Override
-        public ResourceLocation getResourceLocation() {
-            return ResourceLocation.fromNamespaceAndPath(TransferLabels.MODID, "textures/gui/textures.png" );
+        public Identifier getIdentifier() {
+            return Identifier.fromNamespaceAndPath(TransferLabels.MODID, "textures/gui/textures.png" );
         }
     };
 
@@ -78,8 +78,8 @@ public class TLAssetProvider implements IAssetProvider {
         }
 
         @Override
-        public ResourceLocation getResourceLocation() {
-            return ResourceLocation.fromNamespaceAndPath(TransferLabels.MODID, "textures/gui/textures.png");
+        public Identifier getIdentifier() {
+            return Identifier.fromNamespaceAndPath(TransferLabels.MODID, "textures/gui/textures.png");
         }
     };
     public static final IAsset BLACKLIST_BUTTON = new IAsset() {
@@ -89,8 +89,8 @@ public class TLAssetProvider implements IAssetProvider {
         }
 
         @Override
-        public ResourceLocation getResourceLocation() {
-            return ResourceLocation.fromNamespaceAndPath(TransferLabels.MODID, "textures/gui/textures.png" );
+        public Identifier getIdentifier() {
+            return Identifier.fromNamespaceAndPath(TransferLabels.MODID, "textures/gui/textures.png" );
         }
     };
 

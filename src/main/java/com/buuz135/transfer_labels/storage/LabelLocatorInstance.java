@@ -35,7 +35,7 @@ public class LabelLocatorInstance extends LocatorInstance {
 
     @Override
     public Optional<?> locale(Player player) {
-        var level = player.getCommandSenderWorld();
+        var level = player.level();
         if (level instanceof ServerLevel serverLevel){
             var storage = LabelStorage.getStorageFor(serverLevel).getLabelBlocksMap();
             if (storage.containsKey(this.pos) && storage.get(this.pos).getLabels().containsKey(this.direction)){

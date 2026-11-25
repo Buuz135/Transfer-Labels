@@ -5,8 +5,9 @@ import com.buuz135.transfer_labels.filter.ILabelFilter;
 import com.buuz135.transfer_labels.packet.LabelSyncPacket;
 import com.buuz135.transfer_labels.storage.LabelStorage;
 import com.hrznstudio.titanium.api.filter.IFilter;
+import com.hrznstudio.titanium.module.DeferredRegistryHelper;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
@@ -20,12 +21,12 @@ import java.util.Set;
 public abstract class TransferLabelItem extends Item {
 
     private final Mode mode;
-    private ResourceLocation texture;
+    private Identifier texture;
 
     public TransferLabelItem(String type, Properties properties, Mode mode) {
-        super(properties);
+        super(DeferredRegistryHelper.applyItemRegistrationId(properties));
         this.mode = mode;
-        this.texture = ResourceLocation.fromNamespaceAndPath(TransferLabels.MODID, "textures/item/" + type + "_" + this.mode.name().toLowerCase(Locale.ROOT) + "_transfer_label.png");
+        this.texture = Identifier.fromNamespaceAndPath(TransferLabels.MODID, "textures/item/" + type + "_" + this.mode.name().toLowerCase(Locale.ROOT) + "_transfer_label.png");
         TransferLabels.TAB.getTabList().add(this);
     }
 
@@ -47,7 +48,7 @@ public abstract class TransferLabelItem extends Item {
 
     public abstract ILabelFilter<?> createFilter();
 
-    public ResourceLocation getTexture() {
+    public Identifier getTexture() {
         return texture;
     }
 

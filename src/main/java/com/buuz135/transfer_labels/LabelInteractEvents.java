@@ -87,7 +87,7 @@ public class LabelInteractEvents {
                     event.setCanceled(true);
                     LabelStorage.removeLabel(event.getEntity(), serverLevel, pair.getFirst().getPos(), pair.getSecond());
                     TransferLabels.NETWORK.sendTo(new LabelSyncPacket(LabelStorage.getStorageFor(serverLevel).saveNearby(event.getEntity().getOnPos(), 100, serverLevel.registryAccess()), event.getEntity().getOnPos(), 16), (ServerPlayer) event.getEntity());
-                    event.getEntity().playNotifySound(SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 1, 1);
+                    event.getLevel().playSound(null, event.getPos(), SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 1, 1);
                     SERVER_UPDATE.add(new DelayedEvent(event, serverLevel.getGameTime()));
                 }
             }

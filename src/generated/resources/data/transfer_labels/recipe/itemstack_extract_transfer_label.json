@@ -1,22 +1,16 @@
 {
   "neoforge:conditions": [
     {
-      "type": "neoforge:item_exists",
-      "item": "transfer_labels:itemstack_extract_transfer_label"
+      "type": "neoforge:registered",
+      "value": "transfer_labels:itemstack_extract_transfer_label"
     }
   ],
   "type": "minecraft:crafting_shaped",
   "category": "misc",
   "key": {
-    "C": {
-      "tag": "c:chests/wooden"
-    },
-    "H": {
-      "item": "minecraft:hopper"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    }
+    "C": "#c:chests/wooden",
+    "H": "minecraft:hopper",
+    "R": "minecraft:redstone"
   },
   "pattern": [
     " R ",

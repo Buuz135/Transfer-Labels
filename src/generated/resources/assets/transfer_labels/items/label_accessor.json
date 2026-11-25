@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "transfer_labels:item/label_accessor"
+  }
+}

@@ -21,6 +21,8 @@ import com.hrznstudio.titanium.container.BasicAddonContainer;
 import com.hrznstudio.titanium.container.addon.IContainerAddon;
 import com.hrznstudio.titanium.container.addon.IContainerAddonProvider;
 import com.hrznstudio.titanium.network.IButtonHandler;
+import com.hrznstudio.titanium.util.ItemStackSerialization;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -36,9 +38,7 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.neoforge.common.util.INBTSerializable;
+import com.hrznstudio.titanium.nbthandler.INBTSerializable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -69,21 +69,24 @@ public class LabelInstance implements IScreenAddonProvider, MenuProvider, IButto
         this.amountFilter = new InventoryComponent<LabelInstance>("amountFilter", 145, 30, 1)
                 .setSlotLimit(Config.amountUpgrades)
                 .setInputFilter((itemStack, integer) -> ItemStack.isSameItem(itemStack, label))
+                .setOutputFilter((itemStack, integer) -> true)
+                .setExtractGUIPredicate((itemStack, integer) -> true)
                 .setSlotToItemStackRender(0, label)
                 .setSlotToColorRender(0, DyeColor.PURPLE);
         this.speedFilter = new InventoryComponent<LabelInstance>("speedFilter", 145, 66, 1)
                 .setSlotLimit(Config.speedUpgrades)
                 .setInputFilter((itemStack, integer) -> ItemStack.isSameItem(itemStack, label))
+                .setOutputFilter((itemStack, integer) -> true)
+                .setExtractGUIPredicate((itemStack, integer) -> true)
                 .setSlotToItemStackRender(0, label)
                 .setSlotToColorRender(0, DyeColor.LIME);
         this.amountFilter.setComponentHarness(this);
         this.speedFilter.setComponentHarness(this);
     }
 
-    @OnlyIn(Dist.CLIENT)
     @Override
-    public @NotNull List<IFactory<? extends IScreenAddon>> getScreenAddons() {
-        var arrayList = new ArrayList<IFactory<? extends IScreenAddon>>();
+    public @NotNull List<IFactory<?>> getScreenAddons() {
+        var arrayList = new ArrayList<IFactory<?>>();
         if (this.filter != null){
             arrayList.addAll(this.filter.getScreenAddons());
         }
@@ -111,8 +114,8 @@ public class LabelInstance implements IScreenAddonProvider, MenuProvider, IButto
     @Override
     public void handleButtonMessage(int i, Player player, CompoundTag compoundTag) {
         if (i == -2){
-            var slot = compoundTag.getInt("Slot");
-            var stack = ItemStack.parseOptional(player.level().registryAccess(), compoundTag.getCompound("Filter"));
+            var slot = compoundTag.getIntOr("Slot", 0);
+            var stack = ItemStackSerialization.load(player.level().registryAccess(), compoundTag.getCompoundOrEmpty("Filter"));
             this.filter.setFilter(slot, stack);
         }
         if (i == -7) {
@@ -126,7 +129,7 @@ public class LabelInstance implements IScreenAddonProvider, MenuProvider, IButto
 
     @Override
     public Component getDisplayName() {
-        return Component.literal("Label " + this.facing.getName());
+        return Component.literal("Label " + this.facing.getName()).withStyle(ChatFormatting.GREEN);
     }
 
     @Override
@@ -152,10 +155,10 @@ public class LabelInstance implements IScreenAddonProvider, MenuProvider, IButto
     @Override
     public void deserializeNBT(HolderLookup.Provider provider, CompoundTag compoundTag) {
         if (this.filter != null){
-            this.filter.deserializeNBT(provider, compoundTag.getCompound("Filter"));
+            this.filter.deserializeNBT(provider, compoundTag.getCompoundOrEmpty("Filter"));
         }
-        this.amountFilter.deserializeNBT(provider, compoundTag.getCompound("AmountFilter"));
-        this.speedFilter.deserializeNBT(provider, compoundTag.getCompound("SpeedFilter"));
+        this.amountFilter.deserializeNBT(provider, compoundTag.getCompoundOrEmpty("AmountFilter"));
+        this.speedFilter.deserializeNBT(provider, compoundTag.getCompoundOrEmpty("SpeedFilter"));
     }
 
     public void work(Level level){

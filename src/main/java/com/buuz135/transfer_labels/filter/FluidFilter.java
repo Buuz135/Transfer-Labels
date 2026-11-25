@@ -22,17 +22,20 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.chat.Component;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.common.util.INBTSerializable;
+import com.hrznstudio.titanium.nbthandler.INBTSerializable;
 import net.neoforged.neoforge.fluids.FluidStack;
-import net.neoforged.neoforge.fluids.capability.IFluidHandler;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.access.ItemAccess;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -82,9 +85,9 @@ public class FluidFilter implements ILabelFilter<FluidStack>{
         }
 
         FluidStack fluidStack = FluidStack.EMPTY;
-        var capability = stack.getCapability(Capabilities.FluidHandler.ITEM);
-        if (capability != null) {
-            fluidStack = capability.getFluidInTank(0);
+        var capability = ItemAccess.forStack(stack).getCapability(Capabilities.Fluid.ITEM);
+        if (capability != null && capability.size() > 0) {
+            fluidStack = capability.getResource(0).toStack(capability.getAmountAsInt(0));
         }
 
         filter[slot].setFilter(fluidStack.copy());
@@ -125,8 +128,8 @@ public class FluidFilter implements ILabelFilter<FluidStack>{
 
     @Override
     public void handleButtonMessage(int i, Player player, CompoundTag compoundTag) {
-        if (compoundTag.contains("Scrollable_Name") && compoundTag.getString("Scrollable_Name").equals("filter_selector")) {
-            double scroll = compoundTag.getDouble("Scroll");
+        if (compoundTag.contains("Scrollable_Name") && compoundTag.getStringOr("Scrollable_Name", "").equals("filter_selector")) {
+            double scroll = compoundTag.getDoubleOr("Scroll", 0);
             if (scroll > 0) {
                 this.filterType = FilterType.getPrevious(this.filterType.getName());
             } else if (scroll < 0) {
@@ -134,16 +137,16 @@ public class FluidFilter implements ILabelFilter<FluidStack>{
             }
         }
         if (compoundTag.contains("FilterAmount")) {
-            var slot = compoundTag.getInt("FilterAmount");
-            var amount = compoundTag.getInt("Scroll");
+            var slot = compoundTag.getIntOr("FilterAmount", 0);
+            var amount = compoundTag.getIntOr("Scroll", 0);
             if (this.filterType == FilterType.EXACT_COUNT || this.filterType == FilterType.REGULATING) {
                 NumberFilterExtra numberFilterExtra = (NumberFilterExtra) this.savedFilters.get(this.filterType.getName());
                 numberFilterExtra.add(slot, amount);
             }
         }
         if (compoundTag.contains("FilterTag")) {
-            var slot = compoundTag.getInt("FilterTag");
-            var scroll = compoundTag.getInt("Scroll");
+            var slot = compoundTag.getIntOr("FilterTag", 0);
+            var scroll = compoundTag.getIntOr("Scroll", 0);
             if (this.filterType == FilterType.TAG) {
                 FluidTagFilterExtra tagFilterExtra = (FluidTagFilterExtra) this.savedFilters.get(this.filterType.getName());
                 if (scroll > 0) {
@@ -162,7 +165,7 @@ public class FluidFilter implements ILabelFilter<FluidStack>{
         CompoundTag filter = new CompoundTag();
         for (FilterSlot<FluidStack> fluidStackFilterSlot : this.filter) {
             if (fluidStackFilterSlot != null) {
-                filter.put(fluidStackFilterSlot.getFilterID() + "", fluidStackFilterSlot.getFilter().saveOptional(provider));
+                filter.put(fluidStackFilterSlot.getFilterID() + "", saveFluid(provider, fluidStackFilterSlot.getFilter()));
             }
         }
         compoundNBT.put("Filter", filter);
@@ -176,27 +179,26 @@ public class FluidFilter implements ILabelFilter<FluidStack>{
 
     @Override
     public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
-        pointer = nbt.getInt("Pointer");
-        CompoundTag filter = nbt.getCompound("Filter");
+        pointer = nbt.getIntOr("Pointer", 0);
+        CompoundTag filter = nbt.getCompoundOrEmpty("Filter");
         for (FilterSlot<FluidStack> filterSlot : this.filter) {
             filterSlot.setFilter(FluidStack.EMPTY);
         }
-        for (String key : filter.getAllKeys()) {
+        for (String key : filter.keySet()) {
             int slot = Integer.parseInt(key);
             if (slot >= 0 && slot < this.filter.length) {
-                this.filter[slot].setFilter(FluidStack.parseOptional(provider, filter.getCompound(key)));
+                this.filter[slot].setFilter(loadFluid(provider, filter.getCompoundOrEmpty(key)));
             }
         }
-        this.type = Type.valueOf(nbt.getString("Type"));
-        this.filterType = FilterType.getByName(nbt.getString("FilterType"));
-        CompoundTag savedFiltersNBT = nbt.getCompound("SavedFilters");
-        this.savedFilters.forEach((key, value) -> value.deserializeNBT(provider, savedFiltersNBT.getCompound(key)));
+        this.type = Type.valueOf(nbt.getStringOr("Type", Type.BLACKLIST.name()));
+        this.filterType = FilterType.getByName(nbt.getStringOr("FilterType", FilterType.NORMAL.getName()));
+        CompoundTag savedFiltersNBT = nbt.getCompoundOrEmpty("SavedFilters");
+        this.savedFilters.forEach((key, value) -> value.deserializeNBT(provider, savedFiltersNBT.getCompoundOrEmpty(key)));
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
-    public List<IFactory<? extends IScreenAddon>> getScreenAddons() {
-        List<IFactory<? extends IScreenAddon>> list = new ArrayList<>();
+    public List<IFactory<?>> getScreenAddons() {
+        List<IFactory<?>> list = new ArrayList<>();
         list.add(() -> new FluidFilterScreenAddon(this));
         list.add(() -> {
             var lines = new ArrayList<String>();
@@ -244,72 +246,54 @@ public class FluidFilter implements ILabelFilter<FluidStack>{
         Direction oppositeDirection = direction.getOpposite();
         BlockPos oppositePos = pos.relative(direction);
         if (!level.isLoaded(pos) || !level.isLoaded(oppositePos)) return;
-        // Get the fluid handlers for both block entities
-        IFluidHandler sourceHandler = null;
-        IFluidHandler targetHandler = null;
+        ResourceHandler<FluidResource> sourceHandler;
+        ResourceHandler<FluidResource> targetHandler;
 
         if (this.mode == TransferLabelItem.Mode.EXTRACT) {
-            targetHandler = level.getCapability(Capabilities.FluidHandler.BLOCK, oppositePos, oppositeDirection);
-            sourceHandler = level.getCapability(Capabilities.FluidHandler.BLOCK, pos, direction);
+            targetHandler = level.getCapability(Capabilities.Fluid.BLOCK, oppositePos, oppositeDirection);
+            sourceHandler = level.getCapability(Capabilities.Fluid.BLOCK, pos, direction);
         } else {
-            sourceHandler = level.getCapability(Capabilities.FluidHandler.BLOCK, oppositePos, oppositeDirection);
-            targetHandler = level.getCapability(Capabilities.FluidHandler.BLOCK, pos, direction);
+            sourceHandler = level.getCapability(Capabilities.Fluid.BLOCK, oppositePos, oppositeDirection);
+            targetHandler = level.getCapability(Capabilities.Fluid.BLOCK, pos, direction);
         }
 
-        // If we couldn't get the fluid handlers, return
         if (sourceHandler == null || targetHandler == null) return;
-
-        // Transfer fluids from the source to the target
         transferFluids(sourceHandler, targetHandler, (int) Math.min(Integer.MAX_VALUE, (long) amount * Config.fluidTransferMultiplier));
     }
 
-    private void transferFluids(IFluidHandler sourceHandler, IFluidHandler targetHandler, int defaultMaxAmount) {
-        for (int sourceIndex = 0; sourceIndex < sourceHandler.getTanks(); sourceIndex++) {
-            var maxAmount = defaultMaxAmount;
-            FluidStack sourceStack = sourceHandler.getFluidInTank(sourceIndex);
-            if (sourceStack.isEmpty()) continue;
+    private void transferFluids(ResourceHandler<FluidResource> sourceHandler, ResourceHandler<FluidResource> targetHandler, int defaultMaxAmount) {
+        for (int sourceIndex = 0; sourceIndex < sourceHandler.size(); sourceIndex++) {
+            FluidResource sourceResource = sourceHandler.getResource(sourceIndex);
+            int sourceAmount = sourceHandler.getAmountAsInt(sourceIndex);
+            if (sourceResource.isEmpty() || sourceAmount == 0 || !passesFilter(sourceResource.toStack(sourceAmount))) continue;
 
-            // Make a copy to simulate extraction
-            FluidStack drainStack = sourceStack.copy();
-            drainStack.setAmount(maxAmount);
-
-            // Simulate draining
-            FluidStack drained = sourceHandler.drain(drainStack, IFluidHandler.FluidAction.SIMULATE);
-            if (drained.isEmpty() || drained.getAmount() <= 0) continue;
-            if (!passesFilter(drained)) continue;
-
-            // Calculate max transfer amount based on filter type
-            maxAmount = calculateMaxTransferAmount(drained, sourceHandler, targetHandler, sourceIndex, defaultMaxAmount);
-
-            // If maxAmount is 0, skip this fluid
+            int maxAmount = calculateMaxTransferAmount(sourceResource, sourceHandler, targetHandler, sourceIndex, defaultMaxAmount);
             if (maxAmount <= 0) continue;
 
-            // Update drain amount
-            drainStack.setAmount(maxAmount);
-            drained = sourceHandler.drain(drainStack, IFluidHandler.FluidAction.SIMULATE);
-
-            // Simulate filling
-            int filled = targetHandler.fill(drained, IFluidHandler.FluidAction.SIMULATE);
-            if (filled <= 0) continue;
-
-            // Actual transfer
-            FluidStack actualDrain = sourceHandler.drain(new FluidStack(drained.getFluid(), filled), IFluidHandler.FluidAction.EXECUTE);
-            targetHandler.fill(actualDrain, IFluidHandler.FluidAction.EXECUTE);
-            break;
+            if (this.filterType == FilterType.EXACT_COUNT) {
+                try (Transaction transaction = Transaction.openRoot()) {
+                    int moved = ResourceHandlerUtil.moveStacking(sourceHandler, targetHandler, sourceResource::equals, maxAmount, transaction);
+                    if (moved == maxAmount) {
+                        transaction.commit();
+                        return;
+                    }
+                }
+            } else if (ResourceHandlerUtil.moveStacking(sourceHandler, targetHandler, sourceResource::equals, maxAmount, null) > 0) {
+                return;
+            }
         }
     }
 
-    private int calculateMaxTransferAmount(FluidStack sourceStack, IFluidHandler sourceHandler, IFluidHandler targetHandler, int sourceIndex, int defaultMaxAmount) {
+    private int calculateMaxTransferAmount(FluidResource sourceResource, ResourceHandler<FluidResource> sourceHandler, ResourceHandler<FluidResource> targetHandler, int sourceIndex, int defaultMaxAmount) {
         int maxAmount = defaultMaxAmount;
+        FluidStack sourceStack = sourceResource.toStack(sourceHandler.getAmountAsInt(sourceIndex));
 
-        // If the filter is regulating, calculate the max amount based on what's already in the target
         if (this.filterType == FilterType.REGULATING) {
             for (FilterSlot<FluidStack> filterSlot : this.filter) {
                 if (filterSlot != null && !filterSlot.getFilter().isEmpty() && areFluidStacksEqual(filterSlot.getFilter(), sourceStack)) {
-                    // Count how much of this fluid is already in the target
                     int currentAmount = 0;
-                    for (int targetIndex = 0; targetIndex < targetHandler.getTanks(); targetIndex++) {
-                        FluidStack targetStack = targetHandler.getFluidInTank(targetIndex);
+                    for (int targetIndex = 0; targetIndex < targetHandler.size(); targetIndex++) {
+                        FluidStack targetStack = targetHandler.getResource(targetIndex).toStack(targetHandler.getAmountAsInt(targetIndex));
                         if (!targetStack.isEmpty() && areFluidStacksEqual(targetStack, filterSlot.getFilter())) {
                             currentAmount += targetStack.getAmount();
                         }
@@ -322,18 +306,19 @@ public class FluidFilter implements ILabelFilter<FluidStack>{
                     break;
                 }
             }
-        }
-        // If the filter is exact count, only transfer if we can match the exact amount
-        else if (this.filterType == FilterType.EXACT_COUNT) {
+        } else if (this.filterType == FilterType.EXACT_COUNT) {
             for (FilterSlot<FluidStack> filterSlot : this.filter) {
                 if (filterSlot != null && !filterSlot.getFilter().isEmpty() && areFluidStacksEqual(filterSlot.getFilter(), sourceStack)) {
                     NumberFilterExtra numberFilterExtra = (NumberFilterExtra) this.savedFilters.get(FilterType.EXACT_COUNT.getName());
                     int exactAmount = numberFilterExtra.getExtra().get(filterSlot.getFilterID());
-                    if (exactAmount > defaultMaxAmount) { // If the exact amount is too high, we can't transfer anything
-                        maxAmount = 0;
-                        break;
+                    if (exactAmount > defaultMaxAmount) return 0;
+                    int availableAmount = 0;
+                    for (int otherIndex = 0; otherIndex < sourceHandler.size(); otherIndex++) {
+                        if (sourceResource.equals(sourceHandler.getResource(otherIndex))) {
+                            availableAmount += sourceHandler.getAmountAsInt(otherIndex);
+                        }
                     }
-                    maxAmount = exactAmount;
+                    maxAmount = availableAmount >= exactAmount ? exactAmount : 0;
                     break;
                 }
             }
@@ -350,6 +335,14 @@ public class FluidFilter implements ILabelFilter<FluidStack>{
         return FluidStack.isSameFluidSameComponents(stack1, stack2);
     }
 
+    private static CompoundTag saveFluid(HolderLookup.Provider provider, FluidStack stack) {
+        return (CompoundTag) FluidStack.OPTIONAL_CODEC.encodeStart(provider.createSerializationContext(NbtOps.INSTANCE), stack).result().orElseGet(CompoundTag::new);
+    }
+
+    private static FluidStack loadFluid(HolderLookup.Provider provider, CompoundTag tag) {
+        return FluidStack.OPTIONAL_CODEC.parse(provider.createSerializationContext(NbtOps.INSTANCE), tag).result().orElse(FluidStack.EMPTY);
+    }
+
     private boolean passesFilter(FluidStack stack) {
         // If there are no filter slots, allow all fluids
         if (this.filter.length == 0) return true;
@@ -364,13 +357,13 @@ public class FluidFilter implements ILabelFilter<FluidStack>{
 
             if (this.filterType == FilterType.NORMAL) {
                 // Normal filter: exact match
-                fluidMatches = filterSlot.getFilter().isFluidEqual(stack);
+                fluidMatches = areFluidStacksEqual(filterSlot.getFilter(), stack);
             } else if (this.filterType == FilterType.REGULATING) {
                 // Regulating filter: keep the defined amount in the destination
-                fluidMatches = filterSlot.getFilter().isFluidEqual(stack);
+                fluidMatches = areFluidStacksEqual(filterSlot.getFilter(), stack);
             } else if (this.filterType == FilterType.EXACT_COUNT) {
                 // Exact Count filter: match fluid only (amount is checked separately in transferFluids)
-                fluidMatches = filterSlot.getFilter().isFluidEqual(stack);
+                fluidMatches = areFluidStacksEqual(filterSlot.getFilter(), stack);
             } else if (this.filterType == FilterType.MOD) {
                 // Mod filter: match mod ID
                 String stackModId = BuiltInRegistries.FLUID.getKey(stack.getFluid()).getNamespace();

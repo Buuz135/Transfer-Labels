@@ -17,20 +17,19 @@ import com.hrznstudio.titanium.network.locator.ILocatable;
 import com.hrznstudio.titanium.network.messages.ButtonClickNetworkMessage;
 import com.hrznstudio.titanium.util.AssetUtil;
 import com.hrznstudio.titanium.util.TagUtil;
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.hrznstudio.titanium.util.ItemStackSerialization;
 import net.minecraft.ChatFormatting;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
@@ -52,14 +51,14 @@ public class ItemFilterScreenAddon extends BasicScreenAddon {
     }
 
     public int getXSize() {
-        return this.filter.getFilterSlots()[this.filter.getFilterSlots().length - 1].getX() + 17;
+        return this.filter.getFilterSlots()[this.filter.getFilterSlots().length - 1].getX() + 17 - this.filter.getFilterSlots()[0].getX();
     }
 
     public int getYSize() {
-        return this.filter.getFilterSlots()[this.filter.getFilterSlots().length - 1].getY() + 17;
+        return this.filter.getFilterSlots()[this.filter.getFilterSlots().length - 1].getY() + 17 - this.filter.getFilterSlots()[0].getY();
     }
 
-    public void drawBackgroundLayer(GuiGraphics guiGraphics, Screen screen, IAssetProvider provider, int guiX, int guiY, int mouseX, int mouseY, float partialTicks) {
+    public void drawBackgroundLayer(GuiGraphicsExtractor guiGraphics, Screen screen, IAssetProvider provider, int guiX, int guiY, int mouseX, int mouseY, float partialTicks) {
         var i = 0;
         this.guiX = guiX;
         this.guiY = guiY;
@@ -92,30 +91,28 @@ public class ItemFilterScreenAddon extends BasicScreenAddon {
                 }
 
                 guiGraphics.fill(guiX + filterSlot.getX() + 1, guiY + filterSlot.getY() + 1, guiX + filterSlot.getX() + 17, guiY + filterSlot.getY() + 17, (new Color(color.getRed(), color.getGreen(), color.getBlue(), 128)).getRGB());
-                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
                 if (!(filterSlot.getFilter()).isEmpty()) {
-                    Lighting.setupFor3DItems();
-                    guiGraphics.renderItem(filterSlot.getFilter(), filterSlot.getX() + guiX + 1, filterSlot.getY() + guiY + 1);
+                    guiGraphics.item(filterSlot.getFilter(), filterSlot.getX() + guiX + 1, filterSlot.getY() + guiY + 1);
                     if (filter.getFilterType() == FilterType.EXACT_COUNT || filter.getFilterType() == FilterType.REGULATING){
                         NumberFilterExtra extra = (NumberFilterExtra) filter.getSavedFilters().get(filter.getFilterType().getName());
-                        guiGraphics.pose().pushPose();
+                        guiGraphics.pose().pushMatrix();
                         var amount = NumberUtils.getFormatedBigNumber(extra.getExtra().get(i));
-                        guiGraphics.pose().translate(guiX + filterSlot.getX() + 17 - Minecraft.getInstance().font.width(amount) / 2D, guiY + filterSlot.getY() +  13, 200.0D);
-                        guiGraphics.pose().scale(0.5F, 0.5F, 0.5F);
-                        guiGraphics.drawString(Minecraft.getInstance().font, amount, 0,0, 0xFFFFFF);
-                        guiGraphics.pose().popPose();
+                        guiGraphics.pose().translate((float) (guiX + filterSlot.getX() + 17 - Minecraft.getInstance().font.width(amount) / 2D), guiY + filterSlot.getY() + 13);
+                        guiGraphics.pose().scale(0.5F, 0.5F);
+                        guiGraphics.text(Minecraft.getInstance().font, amount, 0, 0, 0xFFFFFF);
+                        guiGraphics.pose().popMatrix();
                     }
                     if (filter.getFilterType() == FilterType.TAG){
                         TagFilterExtra extra = (TagFilterExtra) filter.getSavedFilters().get(filter.getFilterType().getName());
-                        guiGraphics.pose().pushPose();
+                        guiGraphics.pose().pushMatrix();
                         guiGraphics.enableScissor(guiX + filterSlot.getX() + 2 ,guiY + filterSlot.getY(), guiX + filterSlot.getX() +16 ,guiY + filterSlot.getY()+17);
-                        var stackTags = filterSlot.getFilter().getTags().map(TagKey::location).map(ResourceLocation::toString).toList();
+                        var stackTags = filterSlot.getFilter().typeHolder().tags().map(TagKey::location).map(Identifier::toString).toList();
                         var text = extra.getExtra().get(i) != null ? extra.getExtra().get(i).location().toString() : (stackTags.isEmpty() ? "" : stackTags.get(0));
-                        guiGraphics.pose().translate(guiX + filterSlot.getX() + 1 ,guiY + filterSlot.getY() + 6 , 200.0D);
-                        guiGraphics.pose().scale(0.5F, 0.5F, 0.5F);
+                        guiGraphics.pose().translate(guiX + filterSlot.getX() + 1, guiY + filterSlot.getY() + 6);
+                        guiGraphics.pose().scale(0.5F, 0.5F);
                         renderScrollingString(guiGraphics, Minecraft.getInstance().font, Component.literal(text), 2  ,0, 30, 32, 0xFFFFFF);
                         guiGraphics.disableScissor();
-                        guiGraphics.pose().popPose();
+                        guiGraphics.pose().popMatrix();
                     }
                 }
                 ++i;
@@ -123,11 +120,11 @@ public class ItemFilterScreenAddon extends BasicScreenAddon {
         }
     }
 
-    public void drawForegroundLayer(GuiGraphics guiGraphics, Screen screen, IAssetProvider provider, int guiX, int guiY, int mouseX, int mouseY, float partialTicks) {
+    public void drawForegroundLayer(GuiGraphicsExtractor guiGraphics, Screen screen, IAssetProvider provider, int guiX, int guiY, int mouseX, int mouseY, float partialTicks) {
         var i = 0;
         for(FilterSlot<ItemStack> filterSlot : this.filter.getFilterSlots()) {
             if (filterSlot != null && mouseX > guiX + filterSlot.getX() + 1 && mouseX < guiX + filterSlot.getX() + 16 && mouseY > guiY + filterSlot.getY() + 1 && mouseY < guiY + filterSlot.getY() + 16) {
-                guiGraphics.pose().translate(0.0D, 0.0D, 200);
+                guiGraphics.nextStratum();
                 guiGraphics.fill(filterSlot.getX() + 1, filterSlot.getY() + 1, filterSlot.getX() + 17, filterSlot.getY() + 17, -2130706433);
                 if (!filterSlot.getFilter().isEmpty() && Minecraft.getInstance().player.containerMenu.getCarried().isEmpty()) {
                     var tooltip = Screen.getTooltipFromItem(screen.getMinecraft(), filterSlot.getFilter());
@@ -137,7 +134,7 @@ public class ItemFilterScreenAddon extends BasicScreenAddon {
                     }
                     if (filter.getFilterType() == FilterType.TAG) {
                         TagFilterExtra extra = (TagFilterExtra) filter.getSavedFilters().get(filter.getFilterType().getName());
-                        var stackTags = filterSlot.getFilter().getTags().map(TagKey::location).map(ResourceLocation::toString).toList();
+                        var stackTags = filterSlot.getFilter().typeHolder().tags().map(TagKey::location).map(Identifier::toString).toList();
                         int finalI = i;
                         ScrollableSelectionHelper selectionHelper = new ScrollableSelectionHelper("", 0, stackTags,
                                 () -> extra.getExtra().get(finalI) != null ? extra.getExtra().get(finalI).location().toString() : (stackTags.isEmpty() ? "null" : stackTags.get(0)), true);
@@ -149,10 +146,8 @@ public class ItemFilterScreenAddon extends BasicScreenAddon {
                         }
                         tooltip.add(Component.translatable("filter.type.scroll").withStyle(ChatFormatting.DARK_GRAY));
                     }
-                    guiGraphics.renderComponentTooltip(screen.getMinecraft().font, tooltip , mouseX - guiX, mouseY - guiY);
-                    RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+                    guiGraphics.setComponentTooltipForNextFrame(screen.getMinecraft().font, tooltip, mouseX, mouseY);
                 }
-                guiGraphics.pose().translate(0.0D, 0.0D, -200);
             }
             ++i;
         }
@@ -169,11 +164,11 @@ public class ItemFilterScreenAddon extends BasicScreenAddon {
             ILocatable locatable = (ILocatable)((AbstractContainerScreen)screen).getMenu();
 
             for(FilterSlot<ItemStack> filterSlot : this.filter.getFilterSlots()) {
-                if (filterSlot != null && mouseX > (double)(((AbstractContainerScreen)screen).getGuiLeft() + filterSlot.getX() + 1) && mouseX < (double)(((AbstractContainerScreen)screen).getGuiLeft() + filterSlot.getX() + 16) && mouseY > (double)(((AbstractContainerScreen)screen).getGuiTop() + filterSlot.getY() + 1) && mouseY < (double)(((AbstractContainerScreen)screen).getGuiTop() + filterSlot.getY() + 16)) {
+                if (filterSlot != null && mouseX > (double)(((AbstractContainerScreen)screen).getLeftPos() + filterSlot.getX() + 1) && mouseX < (double)(((AbstractContainerScreen)screen).getLeftPos() + filterSlot.getX() + 16) && mouseY > (double)(((AbstractContainerScreen)screen).getTopPos() + filterSlot.getY() + 1) && mouseY < (double)(((AbstractContainerScreen)screen).getTopPos() + filterSlot.getY() + 16)) {
                     CompoundTag compoundNBT = new CompoundTag();
                     compoundNBT.putString("Name", this.filter.getName());
                     compoundNBT.putInt("Slot", filterSlot.getFilterID());
-                    compoundNBT.put("Filter", Minecraft.getInstance().player.containerMenu.getCarried().saveOptional(screen.getMinecraft().level.registryAccess()));
+                    compoundNBT.put("Filter", ItemStackSerialization.save(screen.getMinecraft().level.registryAccess(), Minecraft.getInstance().player.containerMenu.getCarried()));
                     Titanium.NETWORK.sendToServer(new ButtonClickNetworkMessage(locatable.getLocatorInstance(), -2, compoundNBT));
                     return true;
                 }
@@ -196,7 +191,7 @@ public class ItemFilterScreenAddon extends BasicScreenAddon {
                     if (filter.getFilterType() == FilterType.EXACT_COUNT || filter.getFilterType() == FilterType.REGULATING){
                         CompoundTag compoundNBT = new CompoundTag();
                         compoundNBT.putInt("FilterAmount", i);
-                        compoundNBT.putDouble("Scroll", scrollY * (Screen.hasShiftDown() ? 8 : 1) * (Screen.hasControlDown() ? 8 : 1) * (Screen.hasAltDown() ? 16 : 1));
+                        compoundNBT.putDouble("Scroll", scrollY * (Minecraft.getInstance().hasShiftDown() ? 8 : 1) * (Minecraft.getInstance().hasControlDown() ? 8 : 1) * (Minecraft.getInstance().hasAltDown() ? 16 : 1));
 
                         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.TRIPWIRE_CLICK_ON,2));
                         Titanium.NETWORK.sendToServer(new ButtonClickNetworkMessage(locatable.getLocatorInstance(), -7, compoundNBT));
@@ -224,11 +219,11 @@ public class ItemFilterScreenAddon extends BasicScreenAddon {
                 && mouseY >= (guiY + (double)this.getPosY()) && mouseY <= (double)(guiY + this.getPosY() + this.getYSize());
     }
 
-    public static void renderScrollingString(GuiGraphics guiGraphics, net.minecraft.client.gui.Font font, Component text, int minX, int minY, int maxX, int maxY, int color) {
+    public static void renderScrollingString(GuiGraphicsExtractor guiGraphics, net.minecraft.client.gui.Font font, Component text, int minX, int minY, int maxX, int maxY, int color) {
         renderScrollingString(guiGraphics, font, text, (minX + maxX) / 2, minX, minY, maxX, maxY, color);
     }
 
-    public static void renderScrollingString(GuiGraphics guiGraphics, Font font, Component text, int centerX, int minX, int minY, int maxX, int maxY, int color) {
+    public static void renderScrollingString(GuiGraphicsExtractor guiGraphics, Font font, Component text, int centerX, int minX, int minY, int maxX, int maxY, int color) {
         int i = font.width(text);
         int j = (minY + maxY - 9) / 2 + 1;
         int k = maxX - minX;
@@ -239,11 +234,11 @@ public class ItemFilterScreenAddon extends BasicScreenAddon {
             double d2 = Math.sin((Math.PI / 2D) * Math.cos((Math.PI * 2D) * d0 / d1)) / (double)2.0F + (double)0.5F;
             double d3 = Mth.lerp(d2, (double)0.0F, (double)l);
             //guiGraphics.enableScissor(minX, minY, maxX, maxY);
-            guiGraphics.drawString(font, text, minX - (int)d3, j, color);
+            guiGraphics.text(font, text, minX - (int)d3, j, color);
             //guiGraphics.disableScissor();
         } else {
             int i1 = Mth.clamp(centerX, minX + i / 2, maxX - i / 2);
-            guiGraphics.drawCenteredString(font, text, i1, j, color);
+            guiGraphics.centeredText(font, text, i1, j, color);
         }
 
     }

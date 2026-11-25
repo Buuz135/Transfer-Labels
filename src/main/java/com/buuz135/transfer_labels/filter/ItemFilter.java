@@ -14,6 +14,7 @@ import com.hrznstudio.titanium.api.client.IScreenAddon;
 import com.hrznstudio.titanium.api.filter.FilterSlot;
 import com.hrznstudio.titanium.client.screen.addon.StateButtonInfo;
 import com.hrznstudio.titanium.component.button.ButtonComponent;
+import com.hrznstudio.titanium.util.ItemStackSerialization;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -26,12 +27,12 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.capabilities.Capabilities;
-import net.neoforged.neoforge.common.util.INBTSerializable;
-import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemHandlerHelper;
+import com.hrznstudio.titanium.nbthandler.INBTSerializable;
+import net.neoforged.neoforge.transfer.ResourceHandler;
+import net.neoforged.neoforge.transfer.ResourceHandlerUtil;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -118,8 +119,8 @@ public class ItemFilter implements ILabelFilter<ItemStack>{
 
     @Override
     public void handleButtonMessage(int i, Player player, CompoundTag compoundTag) {
-        if (compoundTag.contains("Scrollable_Name") && compoundTag.getString("Scrollable_Name").equals("filter_selector")) {
-            double scroll = compoundTag.getDouble("Scroll");
+        if (compoundTag.contains("Scrollable_Name") && compoundTag.getStringOr("Scrollable_Name", "").equals("filter_selector")) {
+            double scroll = compoundTag.getDoubleOr("Scroll", 0);
             if (scroll > 0) {
                 this.filterType = FilterType.getPrevious(this.filterType.getName());
             } else if (scroll < 0) {
@@ -127,16 +128,16 @@ public class ItemFilter implements ILabelFilter<ItemStack>{
             }
         }
         if (compoundTag.contains("FilterAmount")) {
-            var slot = compoundTag.getInt("FilterAmount");
-            var amount = compoundTag.getInt("Scroll");
+            var slot = compoundTag.getIntOr("FilterAmount", 0);
+            var amount = compoundTag.getIntOr("Scroll", 0);
             if (this.filterType == FilterType.EXACT_COUNT || this.filterType == FilterType.REGULATING) {
                 NumberFilterExtra numberFilterExtra = (NumberFilterExtra) this.savedFilters.get(this.filterType.getName());
                 numberFilterExtra.add(slot, amount);
             }
         }
         if (compoundTag.contains("FilterTag")) {
-            var slot = compoundTag.getInt("FilterTag");
-            var scroll = compoundTag.getInt("Scroll");
+            var slot = compoundTag.getIntOr("FilterTag", 0);
+            var scroll = compoundTag.getIntOr("Scroll", 0);
             if (this.filterType == FilterType.TAG) {
                 TagFilterExtra tagFilterExtra = (TagFilterExtra) this.savedFilters.get(this.filterType.getName());
                 if (scroll > 0) {
@@ -157,7 +158,7 @@ public class ItemFilter implements ILabelFilter<ItemStack>{
         CompoundTag filter = new CompoundTag();
         for (FilterSlot<ItemStack> itemStackFilterSlot : this.filter) {
             if (itemStackFilterSlot != null)
-                filter.put(itemStackFilterSlot.getFilterID() + "", itemStackFilterSlot.getFilter().saveOptional(provider));
+                filter.put(itemStackFilterSlot.getFilterID() + "", ItemStackSerialization.save(provider, itemStackFilterSlot.getFilter()));
         }
         compoundNBT.put("Filter", filter);
         compoundNBT.putString("Type", type.name());
@@ -170,27 +171,26 @@ public class ItemFilter implements ILabelFilter<ItemStack>{
 
     @Override
     public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
-        pointer = nbt.getInt("Pointer");
-        CompoundTag filter = nbt.getCompound("Filter");
+        pointer = nbt.getIntOr("Pointer", 0);
+        CompoundTag filter = nbt.getCompoundOrEmpty("Filter");
         for (FilterSlot<ItemStack> filterSlot : this.filter) {
             filterSlot.setFilter(ItemStack.EMPTY);
         }
-        for (String key : filter.getAllKeys()) {
+        for (String key : filter.keySet()) {
             int slot = Integer.parseInt(key);
             if (slot >= 0 && slot < this.filter.length) {
-                this.filter[slot].setFilter(ItemStack.parseOptional(provider, filter.getCompound(key)));
+                this.filter[slot].setFilter(ItemStackSerialization.load(provider, filter.getCompoundOrEmpty(key)));
             }
         }
-        this.type = Type.valueOf(nbt.getString("Type"));
-        this.filterType = FilterType.getByName(nbt.getString("FilterType"));
-        CompoundTag savedFiltersNBT = nbt.getCompound("SavedFilters");
-        this.savedFilters.forEach((key, value) -> value.deserializeNBT(provider, savedFiltersNBT.getCompound(key)));
+        this.type = Type.valueOf(nbt.getStringOr("Type", Type.BLACKLIST.name()));
+        this.filterType = FilterType.getByName(nbt.getStringOr("FilterType", FilterType.NORMAL.getName()));
+        CompoundTag savedFiltersNBT = nbt.getCompoundOrEmpty("SavedFilters");
+        this.savedFilters.forEach((key, value) -> value.deserializeNBT(provider, savedFiltersNBT.getCompoundOrEmpty(key)));
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
-    public List<IFactory<? extends IScreenAddon>> getScreenAddons() {
-        List<IFactory<? extends IScreenAddon>> list = new ArrayList<>();
+    public List<IFactory<?>> getScreenAddons() {
+        List<IFactory<?>> list = new ArrayList<>();
         list.add(() -> new ItemFilterScreenAddon(this));
         list.add(() -> {
             var lines = new ArrayList<String>();
@@ -239,93 +239,54 @@ public class ItemFilter implements ILabelFilter<ItemStack>{
         BlockPos oppositePos = pos.relative(direction);
         if (!level.isLoaded(pos) || !level.isLoaded(oppositePos)) return;
 
-        // Get the item handlers for both block entities
-        IItemHandler sourceHandler = null;
-        IItemHandler targetHandler = null;
+        ResourceHandler<ItemResource> sourceHandler;
+        ResourceHandler<ItemResource> targetHandler;
 
         if (this.mode == TransferLabelItem.Mode.EXTRACT) {
-            targetHandler = level.getCapability(Capabilities.ItemHandler.BLOCK, oppositePos, oppositeDirection);
-            sourceHandler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, direction);
+            targetHandler = level.getCapability(Capabilities.Item.BLOCK, oppositePos, oppositeDirection);
+            sourceHandler = level.getCapability(Capabilities.Item.BLOCK, pos, direction);
         } else {
-            sourceHandler = level.getCapability(Capabilities.ItemHandler.BLOCK, oppositePos, oppositeDirection);
-            targetHandler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, direction);
+            sourceHandler = level.getCapability(Capabilities.Item.BLOCK, oppositePos, oppositeDirection);
+            targetHandler = level.getCapability(Capabilities.Item.BLOCK, pos, direction);
         }
 
-
-        // If we couldn't get the item handlers, return
         if (sourceHandler == null || targetHandler == null) return;
-
-        // Transfer items from the source to the target
         transferItems(sourceHandler, targetHandler, amount);
     }
 
-    private void transferItems(IItemHandler sourceHandler, IItemHandler targetHandler, int defaultMaxAmount) {
-        for (int sourceSlot = 0; sourceSlot < sourceHandler.getSlots(); sourceSlot++) {
-            var maxAmount = defaultMaxAmount;
-            ItemStack sourceStack = sourceHandler.extractItem(sourceSlot, maxAmount, true);
-            if (sourceStack.isEmpty()) continue;
-            if (!passesFilter(sourceStack)) continue;
+    private void transferItems(ResourceHandler<ItemResource> sourceHandler, ResourceHandler<ItemResource> targetHandler, int defaultMaxAmount) {
+        for (int sourceSlot = 0; sourceSlot < sourceHandler.size(); sourceSlot++) {
+            ItemResource sourceResource = sourceHandler.getResource(sourceSlot);
+            int sourceAmount = sourceHandler.getAmountAsInt(sourceSlot);
+            if (sourceResource.isEmpty() || sourceAmount == 0 || !passesFilter(sourceResource.toStack(sourceAmount))) continue;
 
-            maxAmount = calculateMaxTransferAmount(sourceStack, sourceHandler, targetHandler, sourceSlot, defaultMaxAmount);
-
-            // If maxAmount is 0, skip this item
+            int maxAmount = calculateMaxTransferAmount(sourceResource, sourceHandler, targetHandler, sourceSlot, defaultMaxAmount);
             if (maxAmount <= 0) continue;
 
-            // For EXACT_COUNT filter type with multiple slots
             if (this.filterType == FilterType.EXACT_COUNT) {
-                // Find the matching filter slot to get the exact amount
-                int exactAmount = 0;
-                for (FilterSlot<ItemStack> filterSlot : this.filter) {
-                    if (filterSlot != null && !filterSlot.getFilter().isEmpty() && ItemStack.isSameItem(sourceStack, filterSlot.getFilter())) {
-                        NumberFilterExtra numberFilterExtra = (NumberFilterExtra) this.savedFilters.get(FilterType.EXACT_COUNT.getName());
-                        exactAmount = numberFilterExtra.getExtra().get(filterSlot.getFilterID());
-                        break;
+                try (Transaction transaction = Transaction.openRoot()) {
+                    int moved = ResourceHandlerUtil.moveStacking(sourceHandler, targetHandler, sourceResource::equals, maxAmount, transaction);
+                    if (moved == maxAmount) {
+                        transaction.commit();
+                        return;
                     }
                 }
-                // If the current slot doesn't have enough items, extract from multiple slots
-                if (sourceStack.getCount() < exactAmount) {
-                    handleExactCountMultiSlotTransfer(sourceHandler, targetHandler, sourceStack, sourceSlot, exactAmount);
-                    return;
-                }
-            }
-
-            // Standard extraction for single-slot cases
-            sourceStack = sourceHandler.extractItem(sourceSlot, maxAmount, true);
-
-            ItemStack simulatedResult = ItemHandlerHelper.insertItem(targetHandler, sourceStack.copy(), true);
-            if (!simulatedResult.isEmpty() && this.filterType == FilterType.EXACT_COUNT){
-                continue;
-            }
-            int amountToExtract = sourceStack.getCount() - simulatedResult.getCount();
-            if (amountToExtract > 0) {
-                sourceHandler.extractItem(sourceSlot, amountToExtract, false);
-                ItemHandlerHelper.insertItem(targetHandler, sourceStack.copy().split(amountToExtract), false);
-                break;
+            } else if (ResourceHandlerUtil.moveStacking(sourceHandler, targetHandler, sourceResource::equals, maxAmount, null) > 0) {
+                return;
             }
         }
     }
 
-    /**
-     * Calculates the maximum amount of items to transfer based on the current filter type.
-     *
-     * @param sourceStack The item stack being transferred
-     * @param sourceHandler The source inventory
-     * @param targetHandler The target inventory
-     * @param sourceSlot The source slot index
-     * @param defaultMaxAmount The default maximum transfer amount
-     * @return The calculated maximum transfer amount
-     */
-    private int calculateMaxTransferAmount(ItemStack sourceStack, IItemHandler sourceHandler, IItemHandler targetHandler, int sourceSlot, int defaultMaxAmount) {
+    private int calculateMaxTransferAmount(ItemResource sourceResource, ResourceHandler<ItemResource> sourceHandler, ResourceHandler<ItemResource> targetHandler, int sourceSlot, int defaultMaxAmount) {
         int maxAmount = defaultMaxAmount;
+        ItemStack sourceStack = sourceResource.toStack(sourceHandler.getAmountAsInt(sourceSlot));
 
-        // If the filter is regulating, calculate the max amount based on what's already in the target
         if (this.filterType == FilterType.REGULATING) {
             for (FilterSlot<ItemStack> filterSlot : this.filter) {
                 if (filterSlot != null && !filterSlot.getFilter().isEmpty() && ItemStack.isSameItem(sourceStack, filterSlot.getFilter())) {
-                    // Count how many of this item are already in the target
                     int currentCount = 0;
-                    for (int targetSlot = 0; targetSlot < targetHandler.getSlots(); targetSlot++) {
-                        ItemStack targetStack = targetHandler.getStackInSlot(targetSlot);
+                    for (int targetSlot = 0; targetSlot < targetHandler.size(); targetSlot++) {
+                        ItemStack targetStack = targetHandler.getResource(targetSlot).toStack(targetHandler.getAmountAsInt(targetSlot));
                         if (!targetStack.isEmpty() && ItemStack.isSameItem(targetStack, filterSlot.getFilter())) {
                             currentCount += targetStack.getCount();
                         }
@@ -338,107 +299,25 @@ public class ItemFilter implements ILabelFilter<ItemStack>{
                     break;
                 }
             }
-        }
-        // If the filter is exact count, only transfer if the source stack count matches the filter count exactly
-        // or if we can combine items from multiple slots to match the exact count
-        else if (this.filterType == FilterType.EXACT_COUNT) {
+        } else if (this.filterType == FilterType.EXACT_COUNT) {
             for (FilterSlot<ItemStack> filterSlot : this.filter) {
                 if (filterSlot != null && !filterSlot.getFilter().isEmpty() && ItemStack.isSameItem(sourceStack, filterSlot.getFilter())) {
                     NumberFilterExtra numberFilterExtra = (NumberFilterExtra) this.savedFilters.get(FilterType.EXACT_COUNT.getName());
                     int exactAmount = numberFilterExtra.getExtra().get(filterSlot.getFilterID());
-                    if (exactAmount > defaultMaxAmount){ // If the exact amount is too high, we can't transfer anything
-                        maxAmount = 0;
-                        break;
-                    }
-                    if (sourceStack.getCount() >= exactAmount) {
-                        maxAmount = exactAmount;
-                    } else if (sourceStack.getCount() < exactAmount) { // If the source stack count is less than the exact amount, check if we can combine items from multiple slots
-                        // Calculate how many more items we need
-                        int availableAmount = sourceStack.getCount();
-                        // Look for additional items in other slots
-                        for (int otherSlot = 0; otherSlot < sourceHandler.getSlots(); otherSlot++) {
-                            if (otherSlot == sourceSlot) continue;
-                            // Check if this slot has the same item
-                            ItemStack otherStack = sourceHandler.getStackInSlot(otherSlot);
-                            if (!otherStack.isEmpty() && ItemStack.isSameItem(otherStack, sourceStack)) {
-                                availableAmount += otherStack.getCount();
-                                if (availableAmount >= exactAmount) {
-                                    break;
-                                }
-                            }
-                        }
-                        // If we have enough items across multiple slots, set maxAmount to the exact amount
-                        if (availableAmount >= exactAmount) {
-                            maxAmount = exactAmount;
-                        } else {
-                            maxAmount = 0;
+                    if (exactAmount > defaultMaxAmount) return 0;
+                    int availableAmount = 0;
+                    for (int otherSlot = 0; otherSlot < sourceHandler.size(); otherSlot++) {
+                        if (sourceResource.equals(sourceHandler.getResource(otherSlot))) {
+                            availableAmount += sourceHandler.getAmountAsInt(otherSlot);
                         }
                     }
+                    maxAmount = availableAmount >= exactAmount ? exactAmount : 0;
                     break;
                 }
             }
         }
 
         return maxAmount;
-    }
-
-    /**
-     * Handles the transfer of items from multiple source slots to match an exact count requirement.
-     * 
-     * @param sourceHandler The source inventory
-     * @param targetHandler The target inventory
-     * @param sourceStack The initial source stack
-     * @param sourceSlot The initial source slot
-     * @param exactAmount The exact amount required
-     * @return true if the transfer was successful, false otherwise
-     */
-    private boolean handleExactCountMultiSlotTransfer(IItemHandler sourceHandler, IItemHandler targetHandler, ItemStack sourceStack, int sourceSlot, int exactAmount) {
-        // First, simulate the entire operation to make sure everything fits
-        ItemStack combinedStack = sourceStack.copy();
-        int remainingNeeded = exactAmount - combinedStack.getCount();
-        // Track which slots we'll extract from and how much
-        HashMap<Integer, Integer> extractionPlan = new HashMap<>();
-        extractionPlan.put(sourceSlot, combinedStack.getCount());
-        // Simulate extraction from other slots as needed
-        for (int otherSlot = 0; otherSlot < sourceHandler.getSlots() && remainingNeeded > 0; otherSlot++) {
-            if (otherSlot == sourceSlot) continue;
-            ItemStack otherStack = sourceHandler.getStackInSlot(otherSlot);
-            if (!otherStack.isEmpty() && ItemStack.isSameItem(otherStack, combinedStack)) {
-                // Calculate how many to extract from this slot
-                int toExtract = Math.min(remainingNeeded, otherStack.getCount());
-                extractionPlan.put(otherSlot, toExtract);
-                remainingNeeded -= toExtract;
-            }
-        }
-        // If we couldn't gather enough items, skip this transfer
-        if (remainingNeeded > 0) {
-            return false;
-        }
-        // Simulate insertion into target
-        combinedStack.setCount(exactAmount);
-        ItemStack simulatedResult = ItemHandlerHelper.insertItem(targetHandler, combinedStack.copy(), true);
-        // If we can't insert all items, skip this transfer
-        if (!simulatedResult.isEmpty()) {
-            return false;
-        }
-        // Now perform the actual extraction and insertion
-        combinedStack = ItemStack.EMPTY;
-        // Extract from the planned slots
-        for (var entry : extractionPlan.entrySet()) {
-            int slot = entry.getKey();
-            int amount = entry.getValue();
-
-            ItemStack extracted = sourceHandler.extractItem(slot, amount, false);
-
-            if (combinedStack.isEmpty()) {
-                combinedStack = extracted;
-            } else {
-                combinedStack.grow(extracted.getCount());
-            }
-        }
-        combinedStack.setCount(exactAmount);
-        ItemHandlerHelper.insertItem(targetHandler, combinedStack, false);
-        return true;
     }
 
     private boolean passesFilter(ItemStack stack) {
